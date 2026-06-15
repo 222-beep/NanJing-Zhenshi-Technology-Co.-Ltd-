@@ -1,512 +1,324 @@
-# 机器人控制 SDK 使用手册
+# 机器人控制 SDK 示例集
 
-本仓库包含多个机器人运动控制 SDK，每个 SDK 提供 **Python** 和 **C++** 两种语言的示例程序，通过 RPC 协议与机器人控制器通信。
-
----
-
-## 目录
-
-- [SDK 功能一览](#sdk-功能一览)
-- [目录结构说明](#目录结构说明)
-- [⚠️ 重要注意事项](#️-重要注意事项)
-- [Python SDK 快速开始](#python-sdk-快速开始)
-- [C++ SDK 编译指南](#c-sdk-编译指南)
-- [各 SDK 使用说明](#各-sdk-使用说明)
-- [常见问题](#常见问题)
+本仓库包含 **15 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、数据订阅等功能。
 
 ---
 
-## SDK 功能一览
-
-| SDK 名称 | 功能描述 |
-|----------|----------|
-| `MoveAbsJ_SDK` | 关节绝对运动（单臂） |
-| `MoveAbsJ_Double_SDK` | 关节绝对运动（双臂协同） |
-| `MoveBlend_SDK` | 混合插补运动（直线 + 圆弧轨迹拼接） |
-| `MoveS_SDK` | S 型曲线平滑轨迹运动 |
-| `MoveSeriesToppJ_SDK` | 多段关节轨迹连续运动（ToppJ 算法） |
-| `JogAnyJ_SDK` | 任意关节连续点动（单臂） |
-| `JogAnyJ_Double_SDK` | 任意关节连续点动（双臂协同） |
-| `JogC_SDK` | 关节/笛卡尔空间步进点动 |
-| `SubLoop_SDK` | 子循环指令（用于重复执行动作） |
-| `SyncAsync_SDK` | 同步 / 异步 RPC 发送方式对比示例 |
-| `IOModule_SDK` | IO 模块控制（读取输入 / 设置输出 / 脉冲） |
-| `DragInCST_SDK` | CST 模式零力拖动 |
-| `ForcePositionHybridControl_SDK` | 力位混合控制（恒力 + 轨迹运动） |
-| `Topic_SDK` | 系统状态实时订阅（ZMQ + Protobuf） |
-
----
-
-## 目录结构说明
+## 目录结构
 
 ```
 代码/
-├── common/
-│   └── rpc/
-│       ├── c++/              # C++ 公共 RPC 文件（头文件 + 库文件，替换即更新）
-│       │   ├── include/      # 公共头文件
-│       │   └── lib/          # 公共库文件（win / linux）
-│       └── python/           # Python 公共 RPC 文件（替换即更新）
-│           ├── rpc_client.py # 共享 RPC 客户端模块（唯一一份，所有 SDK 共用）
-│           ├── win/          # Windows 平台（基于 Python 3.10 编译）
-│           ├── x86/          # Linux x86/x64 平台
-│           └── arm/          # Linux ARM 平台
+├── README.md                              # 本文件
 │
-├── MoveAbsJ_SDK/
-│   ├── MoveAbsJ_py/      # Python 示例（运行入口：main.py）
-│   └── MoveAbsJ_c++/     # C++ 示例（需 CMake 编译）
+├── common/rpc/                             # RPC 公共库（所有标准 SDK 的通信基础）
+│   ├── c++/                                # C++ RPC 库
+│   │   ├── include/                        #   头文件
+│   │   │   ├── robot.hpp                   #     机器人客户端封装（同步/异步发送）
+│   │   │   ├── cpp_rpc.hpp                 #     RPC 底层客户端
+│   │   │   ├── resp_dto.h                  #     响应数据类型定义
+│   │   │   ├── msg.hpp                     #     消息类型
+│   │   │   └── ...                         #     其他工具头文件
+│   │   └── lib/                            #   预编译库
+│   │       ├── win/Release/                #     Windows: cpp_rpc.dll/.lib, robot_sdk.dll/.lib
+│   │       └── linux/{x86,arm}/Release/    #     Linux: libcpp_rpc.so, librobot_sdk.so
+│   └── python/                             # Python RPC 库
+│       ├── rpc_client.py                   #   RPC 客户端封装（RpcClient, send_rpcsy,send_rpc_async）
+│       ├── __init__.py
+│       └── {win,x86,arm}/                  #   平台动态库（rpc.pyd/.so, robot_ext.pyd/.so）
 │
-├── MoveBlend_SDK/        # 结构同上，其余 SDK 类似
-│   ...
-└── Topic_SDK/
-    ├── topic_py/         # Python 订阅示例
-    └── topic_c++/        # C++ 订阅示例
+├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动
+├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
+├── MoveBlend_SDK/                          # SD-03  笛卡尔轨迹混合运动（直线+圆弧）
+├── MoveS_SDK/                              # SD-04  S 曲线笛卡尔轨迹运动
+├── MoveSeriesToppJ_SDK/                    # SD-05  关节连续 Topp 轨迹运动
+├── JogC_SDK/                               # SD-06  笛卡尔空间点动
+├── JogAnyJ_SDK/                            # SD-07  单臂任意关节位置控制
+├── JogAnyJ_Double_SDK/                     # SD-08  双臂任意关节位置控制
+├── DragInCST_SDK/                          # SD-09  CST 空间拖动
+├── ForcePositionHybridControl_SDK/         # SD-10  力位混合控制
+├── IOModule_SDK/                           # SD-11  IO 模块控制（DI/DO/脉冲）
+├── SyncAsync_SDK/                          # SD-12  同步 vs 异步发送对比
+├── SubLoop_SDK/                            # SD-13  子循环控制（双模型并行）
+└── Topic_SDK/                              # SD-14  实时数据订阅（独立通信库）
 ```
 
 ---
 
-## ⚠️ 重要注意事项
+## SDK 分类总览
 
-### 1. 必须保持完整目录结构
+### A 类：标准 RPC SDK（13 个）
 
-所有 Python SDK 的底层库文件（`rpc.pyd` / `rpc.so`）和共享客户端模块（`rpc_client.py`）统一存放在 **`common/rpc/python/`** 目录中。每个 SDK 的 `main.py` 通过相对路径自动定位到该目录。
+依赖 `common/rpc/` 公共库，通过 RPC 协议（端口 **5868**）与机器人控制器通信。
 
-> **注意**：底层库基于 **Python 3.10 ABI** 编译，其他版本（如 3.11、3.12）无法使用。
+| 编号 | SDK | 功能 | 交互方式 |
+|------|-----|------|----------|
+| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 循环运动 |
+| SD-02 | MoveAbsJ_Double | 双臂关节空间绝对位置运动 | 循环运动 |
+| SD-03 | MoveBlend | 笛卡尔空间混合轨迹（直线+圆弧） | 交互菜单 |
+| SD-04 | MoveS | 笛卡尔空间 S 曲线轨迹 | 交互菜单 |
+| SD-05 | MoveSeriesToppJ | 关节空间连续 Topp 轨迹 | 交互菜单 |
+| SD-06 | JogC | 笛卡尔空间方向点动 | 循环运动 |
+| SD-07 | JogAnyJ | 单臂任意关节位置控制 | 交互菜单 |
+| SD-08 | JogAnyJ_Double | 双臂任意关节位置控制 | 交互菜单 |
+| SD-09 | DragInCST | CST 空间拖动 | 交互启停 |
+| SD-10 | ForcePositionHybridControl | 力位混合控制（零力/恒力/混合） | 持续型控制 |
+| SD-11 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 交互菜单 |
+| SD-12 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 交互菜单 |
+| SD-13 | SubLoop | 子循环控制（双模型并行执行） | 交互输入 |
 
-**更新 RPC 文件时只需替换 `common/rpc/c++/`（C++）或 `common/rpc/python/`（Python）下的文件即可，无需修改任何 SDK 代码。**
+### B 类：独立通信 SDK（1 个）
 
-**如果只把单个 SDK 文件夹复制到其他地方单独运行，程序会报错找不到库文件。**
+不依赖 `common/rpc/`，使用独立的 ZeroMQ + Protobuf 通信栈。
 
-> 正确做法：**克隆/下载整个仓库**，保持目录层级不变，再在对应 SDK 的 py 目录下运行 `main.py`。
-
-### 2. 运行前必须配置机器人 IP 地址
-
-运行前需要**手动修改** `main.py`（Python）或 `main.cpp`（C++）中的 IP 变量：
-
-- **Python SDK**：修改 `main.py` 顶部的 `ROBOT_IP` 变量：
-
-  ```python
-  ROBOT_IP = "192.168.2.199"   # ← 改成你的机器人实际 IP
-  ```
-
-- **C++ SDK**：修改 `main.cpp` 中的 `robot_ip` 变量：
-
-  ```cpp
-  std::string robot_ip = "192.168.2.199";  // ← 改成你的机器人实际 IP
-  ```
-
-**IP 不对将无法连接机器人**，程序会超时挂起。
-
-### 3. Topic_SDK 独立于其他 SDK
-
-`Topic_SDK` 使用独立的 ZMQ + Protobuf 库（存放在 `topic_py/lib/` 内部），与其他 SDK 的共享库无关，可独立使用。
+| 编号 | SDK | 功能 |
+|------|-----|------|
+| SD-14 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
 
 ---
 
-## Python SDK 快速开始
+## 编译与运行顺序
 
-### 环境要求
+### 总原则
 
-- Python **3.10.x**（底层库基于 3.10 ABI 编译，**其他版本不支持**）
-- 操作系统：Windows x64 / Linux x86_64 / Linux ARM
-
-> 下载地址：[Python 3.10.11](https://www.python.org/downloads/release/python-31011/)
-
-### 运行步骤
-
-以 `MoveAbsJ_SDK` 为例（其他 SDK 步骤完全相同）：
-
-**运行前**请先修改 `main.py` 顶部的 `ROBOT_IP` 为你的机器人实际 IP。
-
-**Windows：**
-
-```bash
-cd MoveAbsJ_SDK/MoveAbsJ_py
-py -3.10 main.py
+```
+┌──────────────────────────────────────────────────┐
+│ ① common/rpc/   公共 RPC 库（预编译，无需编译）     │
+│    ├── C++:  头文件 + .lib/.dll/.so                │
+│    └── Python: rpc_client.py + .pyd/.so            │
+├──────────────────────────────────────────────────┤
+│ ② Topic_SDK    独立编译（与 ① 无依赖关系）          │
+│    依赖：自带的 lib/win/ 或 lib/linux/              │
+├──────────────────────────────────────────────────┤
+│ ③ 其余 13 个标准 RPC SDK                           │
+│    均依赖 ① common/rpc/，彼此独立无先后顺序          │
+│    可任意顺序编译                                    │
+└──────────────────────────────────────────────────┘
 ```
 
-**Linux：**
-
-```bash
-cd MoveAbsJ_SDK/MoveAbsJ_py
-python3.10 main.py
-```
-
-> 所有 Python SDK 结构一致，替换路径即可运行其他 SDK。
+> **重要**：`common/rpc/` 下的所有二进制文件（`.dll`、`.so`、`.pyd`）必须来自**同一版本的机器人控制器 SDK 发布包**，不可混用不同版本的库文件，否则可能导致通信异常。
 
 ---
 
-## C++ SDK 编译指南
+## 系统要求
 
-### 环境要求
+### 编译环境
 
 | 项目 | 要求 |
 |------|------|
-| CMake | >= 3.12 |
+| CMake | ≥ 3.12 |
 | C++ 标准 | C++17 |
-| 编译器（Windows） | Visual Studio 2017+（推荐 2019 16.6+，见下方说明） |
-| 编译器（Linux） | GCC 7.0+ |
+| 编译器 (Windows) | MSVC (Visual Studio 2015+)，需 `/Zc:preprocessor` |
+| 编译器 (Linux) | GCC 7.0+ 或 Clang 5.0+ |
 
-> **Visual Studio 版本说明**
->
-> | VS 版本 | MSVC_VERSION | 支持的编译选项 | 说明 |
-> |---------|-------------|--------------|------|
-> | VS 2019 16.6+ | >= 1926 | `/std:c++17 /Zc:preprocessor /utf-8` | **推荐**，完整支持 |
-> | VS 2017 | < 1926 | `/std:c++17 /utf-8` | 可用，但不启用新预处理器 |
->
-> `/Zc:preprocessor` 启用符合标准的新预处理器，解决 `__VA_ARGS__` 宏展开兼容问题。如果使用 VS 2017，CMake 会自动跳过此选项，编译不受影响。
->
-> **源文件编码**：所有 `.cpp` / `.h` / `.hpp` 文件应以 **UTF-8** 编码保存（CMake 已自动添加 `/utf-8` 编译选项）。
+### Python 运行环境
 
-### 编译步骤
+| 项目 | 要求 |
+|------|------|
+| Python | 3.10 |
+| 操作系统 | Windows 10/11、Ubuntu 20.04+ 或其他 Linux |
+| 依赖库 | 预编译的动态库（已包含在项目中），无需额外安装 |
 
-编译前请先修改 `main.cpp` 中的 `robot_ip` 为你的机器人实际 IP。
+### 支持的操作系统和架构
+
+| 操作系统 | 架构 |
+|----------|------|
+| Windows | x86 / x64 |
+| Linux | x86 / x64、ARM / ARM64 |
+
+### 依赖库
+
+**A 类 — 标准 RPC SDK（13 个）：**
+
+| 库 | 用途 |
+|----|------|
+| cpp_rpc | RPC 通信框架（自研） |
+| robot_sdk | 机器人客户端封装 |
+| nlohmann/json | JSON 序列化/反序列化 |
+| pthread | Linux 线程库 |
+
+**B 类 — Topic SDK（独立）：**
+
+| 库 | 版本 | 用途 |
+|----|------|------|
+| Protocol Buffers | 3.x | 数据序列化/反序列化 |
+| ZMQ (libzmq) | 4.3.6+ | 消息传输 |
+| message | 自定义库 | 消息总线实现 |
+| pthread | — | Linux 线程库 |
+
+### 已验证的编译环境
+
+| 平台 | CMake | 编译器 | 架构 |
+|------|-------|--------|------|
+| Windows | 4.0.2 | MSVC (Visual Studio 2022) | x64 |
+| Linux (x86) | 3.16.3 | GCC 9.4.0 | x86/x64 |
+| Linux (ARM) | 3.22.1 | GCC 11.4.0 | ARM/ARM64 |
+
+---
+
+## C++ 编译
+
+### 标准 RPC SDK 编译
+
+以 MoveAbsJ 为例，其余 12 个标准 SDK 编译方式完全一致。
 
 **Windows：**
 
-```bash
-cd MoveAbsJ_SDK/MoveAbsJ_c++
-mkdir build
-cd build
-cmake .. -G "Visual Studio 17 2022" -A x64
+```powershell
+cd MoveAbsJ_SDK\MoveAbsJ_c++
+mkdir build; cd build
+cmake .. -G "Visual Studio 18 2026" -A x64
 cmake --build . --config Release
 ```
-
-编译完成后可执行文件位于 `build/Release/` 目录中。
 
 **Linux：**
 
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_c++
 mkdir build && cd build
-cmake ..
-make -j$(nproc)
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
 ```
 
-> 所有 C++ SDK 结构一致，替换路径即可编译其他 SDK。
+编译完成后，Windows 平台会自动将 `cpp_rpc.dll` 和 `robot_sdk.dll` 复制到 exe 所在目录（通过 CMakeLists.txt 中的 POST_BUILD 命令），确保运行时能加载。
 
----
+### Topic SDK 编译（独立）
 
-## 各 SDK 使用说明
+Topic SDK 使用自带的 ZeroMQ + Protobuf 库，**不依赖** `common/rpc/`。
 
-### MoveAbsJ — 关节绝对运动（单臂）
+**Windows：**
 
-发送绝对关节角度，机器人运动到目标关节位置。直接运行 `main.py`，程序会循环执行 `motion_cmds` 中的预设指令。
-
-修改 `main.py` 中的 `init_cmds`（初始化指令 + 定义关节变量）和 `motion_cmds`（运动目标列表）以调整运动参数。
-
-> C++ 版本采用**三段式 demo 结构**：
->
-> - **示例 1**：`robot::send_rpcsy` 同步发送 `init_cmds`
-> - **示例 2**：`robot::send_rpc_async` 异步发送 `motion_speedL_cmds`（默认注释）
-> - **示例 3**：扩展返回值处理（`PointChooseIDMoveResp`，默认注释）
->
-> 如需在程序里执行运动，把示例 1 的 `init_cmds` 换成 `motion_cmds`，或自行追加 `robot::send_rpcsy(*client, motion_cmds, ...)` 调用即可。
-
----
-
-### MoveAbsJ_Double — 关节绝对运动（双臂协同）
-
-双臂版关节绝对运动，通过 `||` 分隔符同时控制两台机械臂。结构同 MoveAbsJ，但 `init_cmds` 中需为双臂分别定义关节变量（如 `j0~j4` 和 `j11~j24`），`motion_cmds` 中使用 `||` 连接双臂指令：
-
-```python
-"{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}"
+```powershell
+cd Topic_SDK\topic_c++
+mkdir build; cd build
+cmake .. -G "Visual Studio 18 2026" -A x64
+cmake --build . --config Release
 ```
 
-> 同时定义了 `motion_speedL_cmds`（双臂 SpeedL 在线规划指令），可用于异步发送。
->
-> C++ 版本采用与 MoveAbsJ 一致的**三段式 demo 结构**（示例 1 同步 / 示例 2 异步 / 示例 3 扩展返回），如需实际执行双臂运动，把示例 1 的 `init_cmds` 换成 `motion_cmds` 即可。
-
----
-
-### MoveBlend — 混合插补运动
-
-支持直线段和圆弧段的平滑拼接运动。程序启动后出现交互菜单：
-
-```
-first_insert  - 添加起点（当前位置）
-add_line      - 添加直线轨迹点
-add_circle    - 添加圆弧轨迹点（需要中间点）
-start         - 执行轨迹
-clear_points  - 清除所有轨迹点
-show_points   - 显示当前轨迹点
-exit          - 退出程序
-```
-
-坐标格式为 `x,y,z,q1,q2,q3,q4`（单位：米，四元数姿态）。添加轨迹点时可指定 `zone`（过渡区）和 `speed`（运动速度）参数。
-
----
-
-### MoveS — S 型曲线运动
-
-平滑轨迹运动，适合对运动柔顺性有要求的场景。菜单操作：
-
-```
-start_moves    - 设置起点（当前位置）
-add_moves      - 添加 MoveS 轨迹点（输入格式：x,y,z,q1,q2,q3,q4）
-execute        - 执行轨迹
-clear_points   - 清除所有轨迹点
-show_points    - 显示当前轨迹点
-exit           - 退出程序
-```
-
----
-
-### MoveSeriesToppJ — 多段关节轨迹运动
-
-使用 ToppJ 时间最优算法规划多段关节轨迹。菜单操作：
-
-```
-1 - 设置起点（当前位置）
-2 - 添加关节轨迹点（输入6个关节角，单位：度）
-3 - 设置速度系数（0.1 ~ 1.0）
-4 - 设置加速度系数（0.1 ~ 1.0）
-5 - 执行轨迹
-6 - 清空轨迹点
-7 - 查看已添加的点
-8 - 安全停止并退出
-```
-
----
-
-### JogAnyJ — 任意关节点动（单臂）
-
-移动机器人到指定关节角度位置。菜单操作：
-
-```
-start   - 启动 JogAnyJ 控制（移动到全零位）
-stop    - 停止运动
-custom  - 手动输入目标关节角度（单位：弧度）和速度
-exit    - 停止后退出
-```
-
-修改 `main.py` 中的 `NUM_JOINTS` 以匹配机器人轴数（默认 7）。
-
----
-
-### JogAnyJ_Double — 任意关节点动（双臂协同）
-
-双臂版 JogAnyJ，通过 `||` 分隔符同时控制两台机械臂。菜单操作：
-
-```
-start   - 启动双臂 JogAnyJ 控制（双臂到零位）
-home    - 双臂 MoveAbsJ 回零
-stop    - 停止运动
-custom  - 输入自定义双臂关节位置（弧度）
-exit    - 停止后退出
-```
-
-`custom` 模式下需分别输入左右臂的关节角度和运动速度。修改 `NUM_JOINTS_PER_ARM` 以匹配轴数（默认 7）。
-
----
-
-### JogC — 步进点动
-
-按步长控制机器人在关节或笛卡尔空间内步进运动。直接运行 `main.py`，程序会循环执行 `motion_cmds` 中预设的步进指令。
-
-修改 `motion_cmds` 中的参数可调整方向、步长和速度：
-
-```python
-"{JogC --motion_type=0 --direction=1 --step=0.1 --coordinate=0 --speed=v100}"
-#        关节模式=0       方向           步长(rad)   关节坐标系
-```
-
-> C++ 版本采用与 MoveAbsJ 一致的**三段式 demo 结构**（示例 1 同步 / 示例 2 异步 / 示例 3 扩展返回）。如需实际执行 JogC 步进，把示例 1 的 `init_cmds` 换成 `motion_cmds` 即可。
-
----
-
-### SyncAsync — 同步/异步发送对比
-
-演示两种 RPC 发送方式的区别，启动后出现交互菜单：
-
-```
-sync    - 运行同步发送（MoveAbsJ 关节运动，逐条等待响应）
-async   - 运行异步发送（SpeedL 往返运动，快速下发不阻塞）
-compare - 同步 vs 异步 对比（先跑同步再跑异步，可对比耗时）
-clear   - 清除所有变量
-exit    - 退出程序
-```
-
-- **同步（send_rpcsy）**：发送后等待机器人执行完毕再发下一条，适合需要确认执行结果的场景
-- **异步（send_rpc_async）**：发送后不等待，立即发下一条，适合持续控制类指令（如 SpeedL）
-
-> C++ 版本和 Python 版本的菜单结构完全一致，均可交互选择模式。如需切换预设的同步/异步指令列表，修改 `sync_cmds` / `async_cmds` 即可。
-
----
-
-### SubLoop — 子循环指令
-
-用于向机器人发送 SubLoop 格式的循环控制指令（双模型格式 `cmd1||cmd2`）。程序运行后进入交互模式，直接在控制台输入指令字符串并回车发送。
-
----
-
-### IOModule — IO 模块控制
-
-控制机器人的数字输入/输出模块。菜单操作：
-
-```
-getdi    - 读取数字输入（DI）
-setdo    - 设置数字输出（DO）
-dopulse  - 脉冲输出（DO 定时高低电平）
-exit     - 退出程序
-```
-
-修改 `main.py` 中的指令参数（如 `DO0`、`do_value` 等）以适配实际 IO 通道。
-
----
-
-### DragInCST — CST 拖动
-
-切换机器人到 CST（力矩控制）模式并启动零力拖动。交互菜单：
-
-```
-start   - 切换 CST 模式并开始拖动
-stop    - 停止拖动，切回 CSP 位置模式
-```
-
----
-
-### ForcePositionHybridControl — 力位混合控制
-
-在运动过程中叠加力控制。修改 `main.py` 顶部的模式变量选择场景：
-
-```python
-DRAG_MODE = "free_drag"      # 六自由度零力拖动
-# DRAG_MODE = "z_force"      # 仅 Z 方向恒力控制
-# DRAG_MODE = "hybrid_move_z"  # 直线运动 + Z 方向力位混合
-```
-
----
-
-### Topic — 系统状态订阅
-
-通过 ZMQ 消息总线订阅机器人实时（RT）和非实时（NRT）状态数据，Topic SDK 自带独立库文件，**不依赖** `common/rpc/`。
-
-#### Python 版本
-
-**第一步：修改发布者 IP**
-
-打开 `Topic_SDK/topic_py/main.py`，修改：
-
-```python
-PUBLISHER_IP = "192.168.2.140"   # 改成机器人控制器的实际 IP
-```
-
-> 端口固定为 `19091`，无需修改。
-
-**第二步：运行**
+**Linux：**
 
 ```bash
-cd Topic_SDK/topic_py
-python main.py
+cd Topic_SDK/topic_c++
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make
 ```
 
-程序启动后自动订阅并循环输出：
-- **RT 实时数据**（关节位置、力矩、末端姿态等）：每 **1 秒**打印一次
-- **NRT 非实时数据**（工具、工件、关节限制等配置）：每 **5 秒**打印一次
-- 按 `Ctrl+C` 退出
+编译完成后同样会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录。
 
-**Linux 已知问题**
+Linux 平台可通过 `-DUBUNTU_VERSION=20.04` 或 `-DUBUNTU_VERSION=22.04` 指定 Ubuntu 版本以选择正确的库目录。
 
-若运行时报 `ImportError: undefined symbol: _ZN6google8protobuf...`，使用以下方式启动：
+---
+
+## Python 运行
+
+Python SDK 无需编译，所有模块开箱即用。
 
 ```bash
-LD_PRELOAD=./lib/x86/libprotobuf.so.32 python3 main.py
-# ARM 平台：
-LD_PRELOAD=./lib/arm/libprotobuf.so.32 python3 main.py
+# 修改 main.py 中的 ROBOT_IP 为实际控制器 IP 后直接运行
+python MoveAbsJ_SDK/MoveAbsJ_py/main.py
 ```
 
-#### C++ 版本
+`rpc_client.py` 会自动检测操作系统和架构，加载 `common/rpc/python/` 下匹配当前平台的 `.pyd`/`.so` 动态库。
 
-C++ 版本提供**两种订阅模式**，对应 `topic_c++/src/` 下的两个源文件：
+---
 
-| 文件 | 模式 | 说明 |
-|------|------|------|
-| `topic_sub_direct.cpp` | 直接订阅模式 | 通过回调函数实时接收每帧数据，延迟最低 |
-| `topic_sub_snapshot.cpp` | 快照订阅模式 | 主动查询当前最新状态，适合定时轮询场景 |
+## 公共库路径约定
 
-编译前在 `CMakeLists.txt` 中选择编译哪个源文件，或参考 `Topic_SDK/README.md` 获取详细编译步骤。
+### C++ SDK
 
-修改 C++ 程序中的连接 IP：
+每个标准 SDK 的 `CMakeLists.txt` 通过相对路径引用公共库，**禁止各 SDK 独立复制 include/ 和 lib/ 目录**：
 
-```cpp
-std::string remote_ip = "192.168.2.140";  // 改为实际 IP
+```cmake
+set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
+include_directories("${COMMON_DIR}/include")
 ```
 
----
+编译时自动根据平台选择对应库文件：
+- **Windows**: `common/rpc/c++/lib/win/Release/`
+- **Linux x86**: `common/rpc/c++/lib/linux/x86/Release/`
+- **Linux ARM**: `common/rpc/c++/lib/linux/arm/Release/`
 
-## 常见问题
+### Python SDK
 
-### Q: 运行提示 `Python 3.10 is required` 或模块加载失败
-
-**原因**：底层动态库（`.pyd` / `.so`）基于 Python 3.10 ABI 编译，其他版本（如 3.11、3.12）无法加载。
-
-**解决**：安装 Python 3.10.x，下载地址：[Python 3.10.11](https://www.python.org/downloads/release/python-31011/)。安装时勾选 **"Add Python to PATH"**。如果电脑上已安装多个 Python 版本，使用 `py -3.10 main.py`（Windows）启动器定位到 3.10。
-
----
-
-### Q: 运行 `python main.py` 提示 `Platform directory not found`
-
-**原因**：`common/rpc/python/` 目录不存在或路径结构被破坏。
-
-**解决**：确保你是在**完整仓库目录**下运行，不要只复制单个 SDK 文件夹。
-
----
-
-### Q: 程序卡住不动，没有输出
-
-**原因**：机器人 IP 地址不对，连接超时。
-
-**解决**：检查并修改 `main.py` 中的 `ROBOT_IP`，确保 PC 与机器人在同一局域网内，并可以 ping 通。
-
----
-
-### Q: Windows 提示缺少 DLL
-
-**原因**：Visual C++ 运行时库缺失。
-
-**解决**：安装 [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)（2015~2022 合并包）。
-
----
-
-### Q: 如何切换同步/异步模式
-
-程序启动后出现交互菜单，输入对应命令即可：
-
-```
-sync    - 运行同步发送
-async   - 运行异步发送
-compare - 同步 vs 异步 对比
-```
-
-如需修改预设的指令内容，编辑 `main.py`（或 C++ 的 `main.cpp`）中的 `sync_cmds`（同步指令列表）和 `async_cmds`（异步指令列表）。
-
----
-
-### Q: Linux 上运行提示 `cannot open shared object file`
-
-**解决**：`rpc_client.py` 已自动配置 `LD_LIBRARY_PATH`，如果仍报错，请手动执行：
-
-```bash
-export LD_LIBRARY_PATH=<仓库根目录>/common/rpc/python/x86:$LD_LIBRARY_PATH  # x86
-# 或
-export LD_LIBRARY_PATH=<仓库根目录>/common/rpc/python/arm:$LD_LIBRARY_PATH  # ARM
-```
-
----
-
-### Q: 如何新增一个自定义指令
-
-在对应 SDK 的 `main.py` 中找到 `your_cmds` 列表，添加指令字符串：
+每个 SDK 的 `main.py` 通过 `sys.path` 引用公共 RPC 模块：
 
 ```python
-your_cmds = [
-    "{YourInstruction --param1=value1 --param2=value2}",
-]
+import sys, os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python'))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 ```
-
-然后调用 `send_rpcsy(client, your_cmds, 5000, 0.5)` 发送即可。
 
 ---
 
-> 如有问题，请在 GitHub Issues 中反馈。
+## 重要注意事项
+
+### 1. ROBOT_IP 配置
+
+每个 SDK 的 `main.py` / `main.cpp` 中都有一个 `ROBOT_IP` / `robot_ip` 变量，**运行前必须修改为实际机器人控制器的 IP 地址**。
+
+### 2. 同步 vs 异步 RPC
+
+| 模式 | C++ 函数 | Python 函数 | 适用场景 |
+|------|----------|-------------|----------|
+| 同步 | `robot::send_rpcsy()` | `send_rpcsy()` | 大多数运动指令，需等待响应确认 |
+| 异步 | `robot::send_rpc_async()` | `send_rpc_async()` | SpeedL 等在线规划、持续型控制 |
+
+- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。适合 MoveAbsJ、JogC 等常规运动。
+- **异步 RPC**：快速下发指令后立即返回，不阻塞等待。适合 SpeedL 在线规划、ForcePositionHybridControl 持续力控等场景。
+- **SubLoop 特殊要求**：第一条指令**必须**使用异步发送，且 timeout 要足够大。
+
+### 3. 超时参数单位
+
+| 参数 | C++ | Python |
+|------|-----|--------|
+| `timeout_ms` | 毫秒 (ms) | 毫秒 (ms) |
+| `sleep_time_ms` | 毫秒 (ms) | — |
+| `sleep_s` / `wait_s` | — | 秒 (s) |
+
+### 4. 指令集结构
+
+RPC 指令字符串遵循控制器指令语法，大括号包裹：`{指令名 --参数=值}`。
+
+双臂 SDK 使用 `||` 分隔左右臂指令：`{左臂指令||右臂指令}`。
+
+### 5. 库文件来源一致性
+
+`common/rpc/c++/lib/` 和 `common/rpc/python/` 下的所有二进制文件必须来自**同一版本的机器人控制器 SDK 发布包**，不可混用不同版本的库文件。
+
+### 6. Topic SDK 特殊说明
+
+Topic SDK 使用独立的 ZeroMQ + Protobuf 通信栈，**不依赖** `common/rpc/`。数据订阅端口固定为 **19091**。支持两种数据获取方式：
+- **Direct 模式**：直接调用自由函数，适合快速获取少量字段
+- **Snapshot 模式**：先获取快照再逐字段访问，适合批量读取
+
+详细 API 文档见 `Topic_SDK/topic_c++/API.md`。
+
+---
+
+## 快速开始
+
+1. **确认机器人控制器 IP**，在对应 SDK 的源码中修改 `ROBOT_IP` / `robot_ip`
+2. **Python 直接运行**：`python <SDK目录>/<SDK名>_py/main.py`
+3. **C++ 先编译再运行**：
+
+```powershell
+cd <SDK目录>/<SDK名>_c++
+mkdir build; cd build
+cmake .. ; cmake --build . --config Release
+```
+
+> 推荐新手从 **SyncAsync_SDK** 开始，它演示了同步与异步 RPC 的基本用法。
+
+---
+
+## 参考文档
+
+| 文档 | 路径 |
+|------|------|
+| C++ 核心接口 | `common/rpc/c++/include/robot.hpp` |
+| Python 核心接口 | `common/rpc/python/rpc_client.py` |
+| Topic 数据订阅 API | `Topic_SDK/topic_c++/API.md` |
+| 力位混合控制说明 | `ForcePositionHybridControl_SDK/ForcePositionHybridControl_linux_c++例程使用说明-v1.5.2.pdf` |
+| 力位混合控制 Python 说明 | `ForcePositionHybridControl_SDK/ForcePositionHybridControl_linux_python例程使用说明-v1.5.2.pdf` |
+| 子循环控制 C++ 说明 | `SubLoop_SDK/SubLoop_linux_c++例程使用说明-v1.5.2.pdf` |
+| 子循环控制 Python 说明 | `SubLoop_SDK/SubLoop_linux_python例程使用说明-v1.5.2.pdf` |
