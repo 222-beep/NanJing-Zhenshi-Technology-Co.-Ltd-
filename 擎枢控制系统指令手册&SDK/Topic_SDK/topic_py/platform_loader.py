@@ -6,6 +6,23 @@ import ctypes
 
 _loaded = False
 
+
+def _detect_ubuntu_version():
+    """从 /etc/os-release 检测 Ubuntu 版本号，如 '20.04', '22.04'。失败返回 None。"""
+    try:
+        with open('/etc/os-release', 'r') as f:
+            for line in f:
+                if line.startswith('VERSION_ID='):
+                    version = line.strip().split('=')[1].strip('"')
+                    parts = version.split('.')
+                    if len(parts) >= 2:
+                        return f"{parts[0]}.{parts[1]}"
+                    return version
+    except Exception:
+        pass
+    return None
+
+
 def get_topic_module():
     """自动检测平台、配置动态库路径，返回 topic 模块"""
     global _loaded
@@ -17,6 +34,9 @@ def get_topic_module():
         # 确定平台子目录
         if system == 'windows':
             subdir = 'win'
+            target_dir = os.path.join(base_dir, 'lib', subdir)
+            if not os.path.isdir(target_dir):
+                raise RuntimeError(f"Platform directory not found: {target_dir}")
         elif system == 'linux':
             if machine in ('x86_64', 'amd64', 'i386', 'i686'):
                 subdir = 'x86'
@@ -24,12 +44,25 @@ def get_topic_module():
                 subdir = 'arm'
             else:
                 raise RuntimeError(f"Unsupported Linux architecture: {machine}")
+
+            # 检测 Ubuntu 版本，构建版本化路径 lib/linux/{arch}/{version}/
+            ubuntu_ver = _detect_ubuntu_version()
+            versions_to_try = [ubuntu_ver] if ubuntu_ver else []
+            versions_to_try += ['20.04', '22.04']  # fallback 版本列表
+
+            target_dir = None
+            for v in versions_to_try:
+                candidate = os.path.join(base_dir, 'lib', 'linux', subdir, v)
+                if os.path.isdir(candidate):
+                    target_dir = candidate
+                    break
+
+            if target_dir is None:
+                raise RuntimeError(
+                    f"Platform directory not found: lib/linux/{subdir}/{{20.04,22.04}}"
+                )
         else:
             raise RuntimeError(f"Unsupported OS: {system}")
-
-        target_dir = os.path.join(base_dir, 'lib', subdir)
-        if not os.path.isdir(target_dir):
-            raise RuntimeError(f"Platform directory not found: {target_dir}")
 
         # 添加模块搜索路径
         if target_dir not in sys.path:

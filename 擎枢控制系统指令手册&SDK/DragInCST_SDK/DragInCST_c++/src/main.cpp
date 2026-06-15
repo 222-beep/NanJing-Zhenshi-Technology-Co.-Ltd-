@@ -5,7 +5,7 @@
 
 int main() {
     const std::string robot_ip = "192.168.2.199";
-    string input;
+    std::string input;
 
     std::vector<std::string> init_cmds = {
         "{Clear}",
@@ -32,7 +32,7 @@ int main() {
     auto client = robot::create_client(robot_ip);
 
     //init
-    robot::send_rpcsy(client, init_cmds, 500, 100);
+    robot::send_rpcsy(*client, init_cmds, 500, 100);
 
     std::cout << "Start dragging in CST? (start/stop): ";
     std::cin >> input; 
@@ -41,12 +41,12 @@ int main() {
     while (1) {
         if (input == "start") {
             std::cout << "Start DragInCST!!!" << std::endl;
-            robot::send_rpcsy(client, Dra_sta, 5000, 1000);
+            robot::send_rpcsy(*client, Dra_sta, 5000, 1000);
             std::cout << "Stop dragging in CST? (stop)" << std::endl;
             std::cin >> input;
         }
         else if (input == "stop") {
-            robot::send_rpcsy(client, Dra_stp, 5000, 1000);
+            robot::send_rpcsy(*client, Dra_stp, 5000, 1000);
             std::cout << "Dragging stopped!!" << std::endl;
             std::cout << std::endl;
             std::cout << "Start dragging in CST? (start/stop):" << std::endl;
@@ -61,10 +61,3 @@ int main() {
 }
 
 
-#ifdef _WIN32
-#include <windows.h>
-void delay_ms(unsigned int ms) { Sleep(ms); }
-#else
-#include <unistd.h>
-void delay_ms(unsigned int ms) { usleep(ms * 1000); }
-#endif

@@ -39,7 +39,7 @@
 using namespace std;
 
 // 常量定义
-const string DEFAULT_ROBOT_IP = "192.168.11.11";
+const std::string robot_ip = "192.168.11.11";
 const double PI = acos(-1.0);
 const int REQUIRED_DIM = 10;
 const int USER_INPUT_AXIS = 6;
@@ -225,7 +225,7 @@ int main() {
     cout << "          MoveSeriesToppJ 关节轨迹控制程序         " << endl;
     cout << "=====================================================" << endl;
 
-    string robot_ip = DEFAULT_ROBOT_IP;
+    string robot_ip = ::robot_ip;
     bool connect_ok = false;
 
     // 机器人IP连接流程

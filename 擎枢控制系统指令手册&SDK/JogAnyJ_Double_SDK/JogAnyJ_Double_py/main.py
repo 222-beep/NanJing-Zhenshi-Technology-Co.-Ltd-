@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 单侧机械臂关节数，按实际机型修改（与单臂 main1.py 一致，例如 6、7），默认 7 轴
 NUM_JOINTS_PER_ARM = 7
@@ -66,7 +68,7 @@ def custom_joganyj_motion(client):
             left_joints, right_joints, speed, joint_acc, joint_dec
         )
         print(f"执行指令: {custom_cmd}")
-        arch.send_rpcsy(client, [custom_cmd], 5000, 1.0)
+        send_rpcsy(client, [custom_cmd], 5000, 1.0)
 
     except ValueError:
         print("输入格式错误! 请确保输入的是数字。")
@@ -76,9 +78,13 @@ def custom_joganyj_motion(client):
 ROBOT_IP = "192.168.2.199"
 
 def main():
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
 
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
+
+    send_rpcsy(client, init_cmds, 500, 0.1)
 
     while True:
         print("\n可用命令:")
@@ -92,15 +98,15 @@ def main():
 
         if user_input == "start":
             print("启动双臂 JogAnyJ 控制，双臂到零位!")
-            arch.send_rpcsy(client, Jog_start, 5000, 1.0)
+            send_rpcsy(client, Jog_start, 5000, 1.0)
             print("双臂已移动到初始位置")
 
         elif user_input == "home":
             print("双臂回零位(MoveAbsJ)...")
-            arch.send_rpcsy(client, home_cmds, 50000, 0.5)
+            send_rpcsy(client, home_cmds, 50000, 0.5)
 
         elif user_input == "stop":
-            arch.send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, 5000, 1.0)
             print("运动已停止!")
 
         elif user_input == "custom":
@@ -108,7 +114,7 @@ def main():
 
         elif user_input == "exit":
             print("退出程序...")
-            arch.send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, 5000, 1.0)
             break
 
         else:

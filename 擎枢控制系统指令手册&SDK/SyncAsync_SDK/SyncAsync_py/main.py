@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 import time
 
 # 初始化命令列表
@@ -38,14 +40,14 @@ async_cmds = [
     "{Start}",
 ]
 
-ROBOT_IP = "192.168.2.216"
+ROBOT_IP = "192.168.2.145"
 
 
 def demo_sync(client):
     """同步发送：每条等待响应后再发送下一条"""
     print(f"\n[同步发送] 开始，共 {len(sync_cmds)} 条指令")
     t0 = time.time()
-    arch.send_rpcsy(client, sync_cmds, 10000, 0.5)
+    send_rpcsy(client, sync_cmds, 10000, 0.5)
     print(f"[同步发送] 完成，耗时 {time.time() - t0:.3f} 秒")
 
 
@@ -53,16 +55,20 @@ def demo_async(client):
     """异步发送：快速下发不阻塞等待"""
     print(f"\n[异步发送] 开始，共 {len(async_cmds)} 条指令")
     t0 = time.time()
-    arch.send_rpc_async(client, async_cmds, 10000, 0.5)
+    send_rpc_async(client, async_cmds, 10000, 0.5)
     print(f"[异步发送] 完成，耗时 {time.time() - t0:.3f} 秒")
 
 
 def main():
     """主函数 - 同步发送与异步发送"""
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
 
     # 初始化
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
     print("初始化完成")
 
     while True:
@@ -87,12 +93,12 @@ def main():
             print("\n对比完成")
 
         elif user_input == "clear":
-            arch.send_rpcsy(client, ["{Var --clear}"], 5000, 0.5)
+            send_rpcsy(client, ["{Var --clear}"], 5000, 0.5)
             print("所有变量已清除")
 
         elif user_input == "exit":
             print("退出程序...")
-            arch.send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
+            send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
             break
 
         else:

@@ -1,10 +1,17 @@
 #include "robot.hpp"
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <string>
 
+// ==================================================================
+//  main  ——  使用示例
+// ==================================================================
+
 int main() {
     const std::string robot_ip = "192.168.2.199";
+
+    // ---- 命令定义 --------------------------------------------------
 
     std::vector<std::string> init_cmds = {
         "{Clear}",
@@ -23,14 +30,55 @@ int main() {
         "{JogC --motion_type=0 --direction=-1 --step=0.1 --coordinate=0 --speed=v100}"
     };
 
-    auto client = robot::create_client(robot_ip);
+    std::vector<std::string> your_cmds = {
+        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
 
+        //add your cmds
+
+    };
+
+    // ---- 连接机器人控制器 -------------------------------------------
+
+    std::cout << "Connecting: " << std::endl;
+    auto client = robot::create_client(robot_ip);
+    std::cout << "Connected: " << std::endl;
+
+    // ==================================================================
+    //  示例 1：通用同步 RPC（最常见用法）
+    //  返回值只有 return_code / subcmd_index / return_message
+    // ==================================================================
+    // 可选参数: robot::send_rpcsy(*client, cmds, 超时ms, 间隔ms)
     robot::send_rpcsy(*client, init_cmds, 500, 100);
 
-    while (1) {
-        robot::send_rpcsy(*client, motion_cmds, 50000, 1000);
-        // robot::send_rpc_async(*client, motion_cmds, 10000, 500);
-    }
+    // ==================================================================
+    //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    // ==================================================================
+    // 可选参数: robot::send_rpc_async(*client, cmds, 超时ms, 等待ms)
+    // robot::send_rpc_async(*client, motion_cmds, 10000, 500);
+
+    // // ==================================================================
+    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
+    // //  当某个指令返回了额外的字段时，使用专用的响应类型
+    // // ==================================================================
+    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
+    // core::Msg req(your_cmds[0]);
+    // req.setMsgID(10001);
+    // auto results = client->CallAwait<PointChooseIDMoveResp>(req, 5000);
+    //
+    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
+    // if (results.first == 0 && !results.second.empty()) {
+    //     std::vector<double>& pq = results.second[0].target_pq;
+    //     char buf[512];
+    //     snprintf(buf, sizeof(buf),
+    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
+    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
+    //     std::vector<std::string> blend_cmds = {
+    //         "{MoveBlend --type=first_insert}",
+    //         buf,
+    //         "{MoveBlend --type=start}"
+    //     };
+    //     robot::send_rpcsy(*client, blend_cmds, 5000, 500);
+    // }
 
     return 0;
 }

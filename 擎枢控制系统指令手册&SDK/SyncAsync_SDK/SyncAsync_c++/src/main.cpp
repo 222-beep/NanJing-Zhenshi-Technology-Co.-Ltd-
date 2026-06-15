@@ -44,7 +44,7 @@ vector<string> async_cmds = {
 };
 
 // 计时辅助函数
-static double elapsed_ms(chrono::steady_clock::time_point start) {
+static double elapsed_sec(chrono::steady_clock::time_point start) {
     auto end = chrono::steady_clock::now();
     return chrono::duration_cast<chrono::milliseconds>(end - start).count() / 1000.0;
 }
@@ -53,14 +53,14 @@ static void demo_sync(cpp_rpc::CPPClient& client) {
     cout << "\n[同步发送] 开始，共 " << sync_cmds.size() << " 条指令" << endl;
     auto t0 = chrono::steady_clock::now();
     robot::send_rpcsy(client, sync_cmds, 10000, 500);
-    cout << "[同步发送] 完成，耗时 " << elapsed_ms(t0) << " 秒" << endl;
+    cout << "[同步发送] 完成，耗时 " << elapsed_sec(t0) << " 秒" << endl;
 }
 
 static void demo_async(cpp_rpc::CPPClient& client) {
     cout << "\n[异步发送] 开始，共 " << async_cmds.size() << " 条指令" << endl;
     auto t0 = chrono::steady_clock::now();
     robot::send_rpc_async(client, async_cmds, 10000, 500);
-    cout << "[异步发送] 完成，耗时 " << elapsed_ms(t0) << " 秒" << endl;
+    cout << "[异步发送] 完成，耗时 " << elapsed_sec(t0) << " 秒" << endl;
 }
 
 int main() {

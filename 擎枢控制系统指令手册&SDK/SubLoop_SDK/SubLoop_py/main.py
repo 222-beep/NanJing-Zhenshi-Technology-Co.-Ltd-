@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 import sys
 
 # 初始化命令列表
@@ -16,10 +18,14 @@ init_cmds = [
 
 def main():
     robot_ip = "192.168.2.241"
-    client = arch.create_client(robot_ip)
+    client = RpcClient(robot_ip)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
 
     # 发送初始化指令
-    # arch.send_rpcsy(client, init_cmds, 500, 1)
+    # send_rpcsy(client, init_cmds, 500, 1)
 
     # 第一条SubLoop指令
     first_subloop_cmds = [
@@ -27,7 +33,7 @@ def main():
     ]
 
     # 第一条指令必须是异步，且timeout必须设置得足够大，否则后续指令会被丢弃
-    # arch.send_rpc_async(client, first_subloop_cmds, sys.maxsize, 1)
+    # send_rpc_async(client, first_subloop_cmds, sys.maxsize, 1)
 
     your_old_cmds = [
         "{MoveAbsJ||MoveAbsJ}",
@@ -42,7 +48,7 @@ def main():
     ]
 
     # 普通异步RPC调用示例
-    # arch.send_rpc_async(client, your_old_cmds, 50000, 1)
+    # send_rpc_async(client, your_old_cmds, 50000, 1)
 
     # 主循环发送运动指令
     while True:
@@ -51,8 +57,8 @@ def main():
         input_cmd = input().strip()
         your_cmds.clear()
         your_cmds.append(input_cmd)
-        # arch.send_rpcsy(client, your_cmds, 50000, 5)
-        arch.send_rpc_async(client, your_cmds, 1000000, 3)
+        # send_rpcsy(client, your_cmds, 50000, 5)
+        send_rpc_async(client, your_cmds, 1000000, 3)
 
     return 0
 

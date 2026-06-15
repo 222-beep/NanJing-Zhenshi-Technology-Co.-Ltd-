@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 初始化命令列表
 init_cmds = [
@@ -29,10 +31,14 @@ ROBOT_IP = "192.168.2.217"
 
 def main():
     """主函数 - IO 模块指令交互发送"""
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
 
     # 发送初始化指令
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
     print("初始化完成")
 
     while True:
@@ -45,15 +51,15 @@ def main():
         user_input = input("请输入命令: ").strip().lower()
 
         if user_input == "getdi":
-            arch.send_rpcsy(client, getdi_cmds, 5000, 0.5)
+            send_rpcsy(client, getdi_cmds, 5000, 0.5)
             print("[GetDI] 指令已发送")
 
         elif user_input == "setdo":
-            arch.send_rpcsy(client, setdo_cmds, 5000, 0.5)
+            send_rpcsy(client, setdo_cmds, 5000, 0.5)
             print("[SetDO] 指令已发送")
 
         elif user_input == "dopulse":
-            arch.send_rpcsy(client, dopulse_cmds, 5000, 0.5)
+            send_rpcsy(client, dopulse_cmds, 5000, 0.5)
             print("[DOPulse] 指令已发送")
 
         elif user_input == "exit":

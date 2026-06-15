@@ -11,13 +11,13 @@
 
 namespace {
 
-const std::string kRobotIp = "192.168.2.199";
+const std::string robot_ip = "192.168.2.199";
 
 // 可选模式：
 // "free_drag"      ：6 个方向都可拖动，零力拖动
 // "z_force"        ：只开启 Z 方向恒力
 // "hybrid_move_z"  ：直线运动 + Z 方向力控，力位混合
-const std::string kDragMode = "free_drag";
+const std::string DragMode = "free_drag";
 
 std::atomic<bool> g_run{true};
 
@@ -80,13 +80,13 @@ int main() {
         {"hybrid_move_z", &hybrid_move_z_cmds},
     };
 
-    auto it = drag_cmd_map.find(kDragMode);
+    auto it = drag_cmd_map.find(DragMode);
     if (it == drag_cmd_map.end()) {
-        throw std::runtime_error("未知 DRAG_MODE: " + kDragMode);
+        throw std::runtime_error("未知 DRAG_MODE: " + DragMode);
     }
     const std::vector<std::string>& drag_cmds = *it->second;
 
-    auto client = robot::create_client(kRobotIp);
+    auto client = robot::create_client(robot_ip);
 
     // Python: send_rpcsy(..., 500, 0.1) -> 此处 sleep 与 py 一致用 100ms
     robot::send_rpcsy(*client, init_cmds, 500, 100);

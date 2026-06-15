@@ -2,6 +2,7 @@
 #define SYSTEM_STATE_READER_HPP
 
 #include "shared_data.hpp"
+#include <iostream>
 #include <memory>
 #include <cstring>
 #include <string>
@@ -561,6 +562,20 @@ inline std::string getInterfaceName(size_t idx) {
 }
 inline int getInterfaceState(size_t idx) {
     auto s = SystemStateReader::snapshotNrt(); return s.valid() ? s.interfaceState(idx) : 0;
+}
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+// 打印 vector<double> 的内容，max_print 控制最大打印长度
+inline void print_vector(const std::vector<double>& vec, size_t max_print = ~size_t(0)) {
+    std::cout << "[";
+    for (size_t i = 0; i < vec.size() && i < max_print; ++i) {
+        std::cout << vec[i] << (i + 1 < vec.size() ? ", " : "");
+    }
+    if (vec.size() > max_print) std::cout << "...";
+    std::cout << "]";
 }
 
 #endif // SYSTEM_STATE_READER_HPP

@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 机器人关节轴数，按实际机型修改（例如 6、7），这里默认7轴
 NUM_JOINTS = 7
@@ -23,10 +25,14 @@ ROBOT_IP = "192.168.2.199"
 def main():
     """主函数"""
     # 创建客户端
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
     
     # 发送初始化指令
-    arch.send_rpcsy(client, init_cmds,500,0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
     
     # 主循环 - 等待用户输入控制JogAnyJ
     while True:
@@ -40,11 +46,11 @@ def main():
         
         if user_input == "start":
             print("启动JogAnyJ控制!")
-            arch.send_rpcsy(client, Jog_start, 5000, 1.0)
+            send_rpcsy(client, Jog_start, 5000, 1.0)
             print("机器人已移动到初始位置")
             
         elif user_input == "stop":
-            arch.send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, 5000, 1.0)
             print("运动已停止!")
             
         elif user_input == "custom":
@@ -63,7 +69,7 @@ def main():
                 # 构建自定义指令
                 custom_cmd = f"{{JogAnyJ --joint_pos={{{','.join(map(str, joints))}}} --joint_vel={speed} --joint_acc={0.5} --joint_dec={0.5}}}"
                 print(f"执行指令: {custom_cmd}")
-                arch.send_rpcsy(client, [custom_cmd], 5000, 1.0) 
+                send_rpcsy(client, [custom_cmd], 5000, 1.0) 
                 
             except ValueError:
                 print("输入格式错误! 请确保输入的是数字。")

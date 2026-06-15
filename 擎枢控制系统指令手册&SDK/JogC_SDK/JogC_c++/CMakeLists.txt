@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.12)
 project(message)
 #set(CMAKE_CONFIGURATION_TYPES Release)
 
-set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common")
+set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 include_directories("${COMMON_DIR}/include/message")
 
@@ -38,17 +38,31 @@ add_definitions("-g")
 endif(UNIX)
 
 if(MSVC)
-	add_compile_options(/std:c++17 /Zc:preprocessor)
+	# /Zc:preprocessor 需要 VS 2019 16.6+ (MSVC_VERSION >= 1926)
+	# VS 2017 不支持此选项，仅启用 /std:c++17 /utf-8
+	if(MSVC_VERSION GREATER_EQUAL 1926)
+		add_compile_options(/std:c++17 /Zc:preprocessor /utf-8)
+	else()
+		add_compile_options(/std:c++17 /utf-8)
+	endif()
 endif(MSVC)
-
-SET(SRC include/overall_system_state.pb.cc)
 
 add_executable(Hello_JogC src/main.cpp)
 
 if(WIN32)
-target_link_libraries(Hello_JogC cpp_rpc robot_sdk)
+target_link_libraries(Hello_JogC cpp_rpc)
+
+# 编译后自动把 dll 复制到 exe 旁边（否则运行时会报"找不到 dll"）
+add_custom_command(TARGET Hello_JogC POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDK_LIB_DIR}/cpp_rpc.dll"
+        "$<TARGET_FILE_DIR:Hello_JogC>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDK_LIB_DIR}/robot_sdk.dll"
+        "$<TARGET_FILE_DIR:Hello_JogC>"
+)
 
 elseif(UNIX)
-target_link_libraries(Hello_JogC cpp_rpc robot_sdk pthread)
+target_link_libraries(Hello_JogC cpp_rpc pthread)
 
 endif()

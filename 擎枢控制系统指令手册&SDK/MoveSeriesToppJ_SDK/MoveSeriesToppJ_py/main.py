@@ -1,5 +1,7 @@
 import math
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 初始化指令列表
 init_cmds = [
@@ -60,10 +62,14 @@ def clamp(value, min_val, max_val):
 
 def main():
     # 创建客户端
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
 
     # 发送初始化指令
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
 
     # 轨迹点列表：每项为 {"name": ..., "angles": [...]}（angles 为弧度）
     trajectory_list = []
@@ -93,7 +99,7 @@ def main():
         try:
             if user_input == "1":
                 print("[操作] 设置轨迹起点...")
-                arch.send_rpcsy(
+                send_rpcsy(
                     client,
                     ["{MoveSeriesToppJ --type=first_insert}"],
                     5000, 0.5,
@@ -110,7 +116,7 @@ def main():
                     "{MoveSeriesToppJ --type=insert "
                     f"--jointtarget_value={joint_str}}}"
                 )
-                arch.send_rpcsy(client, [cmd], 5000, 0.5)
+                send_rpcsy(client, [cmd], 5000, 0.5)
 
                 point_name = f"j{len(trajectory_list) + 1}"
                 trajectory_list.append({"name": point_name, "angles": angles_rad})
@@ -136,12 +142,12 @@ def main():
                     "{MoveSeriesToppJ --type=start "
                     f"--vel_coef={speed:.5f} --acc_coef={accel:.5f}}}"
                 )
-                arch.send_rpcsy(client, [cmd], 30000, 1.0)
+                send_rpcsy(client, [cmd], 30000, 1.0)
                 print("[成功] 轨迹执行完成！")
 
             elif user_input == "6":
                 print("[操作] 清空轨迹点...")
-                arch.send_rpcsy(
+                send_rpcsy(
                     client,
                     ["{MoveSeriesToppJ --type=clear}"],
                     5000, 0.5,
@@ -160,9 +166,9 @@ def main():
             elif user_input == "8":
                 print("[操作] 安全停止机器人...")
                 # 停止机器人运动
-                arch.send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
+                send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
                 # 恢复伺服使能
-                arch.send_rpcsy(client, ["{Start}"], 5000, 1.0)
+                send_rpcsy(client, ["{Start}"], 5000, 1.0)
                 print("[成功] 程序安全退出！")
                 break
 

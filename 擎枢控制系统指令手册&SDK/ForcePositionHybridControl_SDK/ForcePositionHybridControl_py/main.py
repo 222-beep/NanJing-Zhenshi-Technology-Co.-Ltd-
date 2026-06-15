@@ -1,5 +1,7 @@
 import time
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 ROBOT_IP = "192.168.2.199"
 
@@ -65,18 +67,22 @@ DRAG_CMD_MAP = {
 
 
 def main():
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
 
     drag_cmds = DRAG_CMD_MAP.get(DRAG_MODE)
     if drag_cmds is None:
         raise ValueError(f"未知 DRAG_MODE: {DRAG_MODE}")
 
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
 
     try:
         # ForcePositionHybridControl 是持续型控制，不要在 while True 里一直重复发
         # 发一次异步指令即可
-        arch.send_rpc_async(client, drag_cmds, 86400000, 0.1)
+        send_rpc_async(client, drag_cmds, 86400000, 0.1)
 
         # 保持程序运行，等待 Ctrl+C
         while True:
@@ -88,7 +94,7 @@ def main():
     finally:
         # 退出时一定要 Stop，不然力控可能还在执行
         try:
-            arch.send_rpcsy(client, stop_cmds, 1000, 0.1)
+            send_rpcsy(client, stop_cmds, 1000, 0.1)
             print("Stop command sent.")
         except Exception as exc:
             print(f"Failed to send Stop: {exc}")

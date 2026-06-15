@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 初始化命令列表 - 双臂版本
 init_cmds = [
@@ -55,17 +57,21 @@ ROBOT_IP = "192.168.2.199"
 def main():
     """主函数"""
     # 创建客户端
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
     
     # 发送初始化指令  
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)  # 同步rpc (client, 指令, 超时时间ms, 休眠时间s)
+    send_rpcsy(client, init_cmds, 500, 0.1)  # 同步rpc (client, 指令, 超时ms, 间隔s)
     
     # 主循环发送运动指令
     while True:
         # 发送同步双臂运动指令
-        arch.send_rpcsy(client, motion_cmds, 5000, 0.5)
+        send_rpcsy(client, motion_cmds, 5000, 0.5)
         # 发送异步双臂在线规划指令
-        arch.send_rpc_async(client, motion_speedL_cmds, 10000, 0.5)
+        send_rpc_async(client, motion_speedL_cmds, 10000, 0.5)
 
 # 程序入口
 if __name__ == "__main__":

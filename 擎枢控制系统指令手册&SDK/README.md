@@ -42,12 +42,15 @@
 ```
 代码/
 ├── common/
-│   ├── include/          # C++ 公共头文件
-│   ├── lib/              # C++ 公共库文件（win / linux）
-│   └── py_lib/           # ⭐ Python 公共库（所有 Python SDK 共用）
-│       ├── win/          # Windows 平台
-│       ├── x86/          # Linux x86/x64 平台
-│       └── arm/          # Linux ARM 平台
+│   └── rpc/
+│       ├── c++/              # C++ 公共 RPC 文件（头文件 + 库文件，替换即更新）
+│       │   ├── include/      # 公共头文件
+│       │   └── lib/          # 公共库文件（win / linux）
+│       └── python/           # Python 公共 RPC 文件（替换即更新）
+│           ├── rpc_client.py # 共享 RPC 客户端模块（唯一一份，所有 SDK 共用）
+│           ├── win/          # Windows 平台（基于 Python 3.10 编译）
+│           ├── x86/          # Linux x86/x64 平台
+│           └── arm/          # Linux ARM 平台
 │
 ├── MoveAbsJ_SDK/
 │   ├── MoveAbsJ_py/      # Python 示例（运行入口：main.py）
@@ -66,19 +69,31 @@
 
 ### 1. 必须保持完整目录结构
 
-所有 Python SDK 的底层库文件统一存放在 **`common/py_lib/`** 目录中。每个 SDK 的 `arch.py` 通过相对路径自动定位到该目录。
+所有 Python SDK 的底层库文件（`rpc.pyd` / `rpc.so`）和共享客户端模块（`rpc_client.py`）统一存放在 **`common/rpc/python/`** 目录中。每个 SDK 的 `main.py` 通过相对路径自动定位到该目录。
+
+> **注意**：底层库基于 **Python 3.10 ABI** 编译，其他版本（如 3.11、3.12）无法使用。
+
+**更新 RPC 文件时只需替换 `common/rpc/c++/`（C++）或 `common/rpc/python/`（Python）下的文件即可，无需修改任何 SDK 代码。**
 
 **如果只把单个 SDK 文件夹复制到其他地方单独运行，程序会报错找不到库文件。**
 
 > 正确做法：**克隆/下载整个仓库**，保持目录层级不变，再在对应 SDK 的 py 目录下运行 `main.py`。
 
-### 2. 运行前必须修改机器人 IP 地址
+### 2. 运行前必须配置机器人 IP 地址
 
-每个 `main.py` 文件顶部都有一行：
+运行前需要**手动修改** `main.py`（Python）或 `main.cpp`（C++）中的 IP 变量：
 
-```python
-ROBOT_IP = "192.168.2.199"   # ← 改成你的机器人实际 IP
-```
+- **Python SDK**：修改 `main.py` 顶部的 `ROBOT_IP` 变量：
+
+  ```python
+  ROBOT_IP = "192.168.2.199"   # ← 改成你的机器人实际 IP
+  ```
+
+- **C++ SDK**：修改 `main.cpp` 中的 `robot_ip` 变量：
+
+  ```cpp
+  std::string robot_ip = "192.168.2.199";  // ← 改成你的机器人实际 IP
+  ```
 
 **IP 不对将无法连接机器人**，程序会超时挂起。
 
@@ -92,29 +107,32 @@ ROBOT_IP = "192.168.2.199"   # ← 改成你的机器人实际 IP
 
 ### 环境要求
 
-- Python **3.7** 或以上版本
+- Python **3.10.x**（底层库基于 3.10 ABI 编译，**其他版本不支持**）
 - 操作系统：Windows x64 / Linux x86_64 / Linux ARM
+
+> 下载地址：[Python 3.10.11](https://www.python.org/downloads/release/python-31011/)
 
 ### 运行步骤
 
 以 `MoveAbsJ_SDK` 为例（其他 SDK 步骤完全相同）：
 
-**第一步：修改机器人 IP**
+**运行前**请先修改 `main.py` 顶部的 `ROBOT_IP` 为你的机器人实际 IP。
 
-打开 `MoveAbsJ_SDK/MoveAbsJ_py/main.py`，找到并修改：
-
-```python
-ROBOT_IP = "192.168.2.199"   # 改成你的机器人 IP
-```
-
-**第二步：运行程序**
+**Windows：**
 
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_py
-python main.py
+py -3.10 main.py
 ```
 
-> Windows 用户也可以直接在资源管理器中双击 `main.py`（前提是已关联 Python）。
+**Linux：**
+
+```bash
+cd MoveAbsJ_SDK/MoveAbsJ_py
+python3.10 main.py
+```
+
+> 所有 Python SDK 结构一致，替换路径即可运行其他 SDK。
 
 ---
 
@@ -126,10 +144,25 @@ python main.py
 |------|------|
 | CMake | >= 3.12 |
 | C++ 标准 | C++17 |
-| 编译器（Windows） | MSVC（Visual Studio 2019+） |
+| 编译器（Windows） | Visual Studio 2017+（推荐 2019 16.6+，见下方说明） |
 | 编译器（Linux） | GCC 7.0+ |
 
-### Windows 编译（以 MoveAbsJ 为例）
+> **Visual Studio 版本说明**
+>
+> | VS 版本 | MSVC_VERSION | 支持的编译选项 | 说明 |
+> |---------|-------------|--------------|------|
+> | VS 2019 16.6+ | >= 1926 | `/std:c++17 /Zc:preprocessor /utf-8` | **推荐**，完整支持 |
+> | VS 2017 | < 1926 | `/std:c++17 /utf-8` | 可用，但不启用新预处理器 |
+>
+> `/Zc:preprocessor` 启用符合标准的新预处理器，解决 `__VA_ARGS__` 宏展开兼容问题。如果使用 VS 2017，CMake 会自动跳过此选项，编译不受影响。
+>
+> **源文件编码**：所有 `.cpp` / `.h` / `.hpp` 文件应以 **UTF-8** 编码保存（CMake 已自动添加 `/utf-8` 编译选项）。
+
+### 编译步骤
+
+编译前请先修改 `main.cpp` 中的 `robot_ip` 为你的机器人实际 IP。
+
+**Windows：**
 
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_c++
@@ -141,7 +174,7 @@ cmake --build . --config Release
 
 编译完成后可执行文件位于 `build/Release/` 目录中。
 
-### Linux 编译
+**Linux：**
 
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_c++
@@ -150,19 +183,39 @@ cmake ..
 make -j$(nproc)
 ```
 
+> 所有 C++ SDK 结构一致，替换路径即可编译其他 SDK。
+
 ---
 
 ## 各 SDK 使用说明
 
-### MoveAbsJ — 关节绝对运动
+### MoveAbsJ — 关节绝对运动（单臂）
 
-发送绝对关节角度，机器人运动到目标关节位置。
+发送绝对关节角度，机器人运动到目标关节位置。直接运行 `main.py`，程序会循环执行 `motion_cmds` 中的预设指令。
+
+修改 `main.py` 中的 `init_cmds`（初始化指令 + 定义关节变量）和 `motion_cmds`（运动目标列表）以调整运动参数。
+
+> C++ 版本采用**三段式 demo 结构**：
+>
+> - **示例 1**：`robot::send_rpcsy` 同步发送 `init_cmds`
+> - **示例 2**：`robot::send_rpc_async` 异步发送 `motion_speedL_cmds`（默认注释）
+> - **示例 3**：扩展返回值处理（`PointChooseIDMoveResp`，默认注释）
+>
+> 如需在程序里执行运动，把示例 1 的 `init_cmds` 换成 `motion_cmds`，或自行追加 `robot::send_rpcsy(*client, motion_cmds, ...)` 调用即可。
+
+---
+
+### MoveAbsJ_Double — 关节绝对运动（双臂协同）
+
+双臂版关节绝对运动，通过 `||` 分隔符同时控制两台机械臂。结构同 MoveAbsJ，但 `init_cmds` 中需为双臂分别定义关节变量（如 `j0~j4` 和 `j11~j24`），`motion_cmds` 中使用 `||` 连接双臂指令：
 
 ```python
-ROBOT_IP = "192.168.2.199"
+"{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}"
 ```
 
-修改 `main.py` 中的 `motion_cmds` 列表，调整目标关节角度后运行即可。
+> 同时定义了 `motion_speedL_cmds`（双臂 SpeedL 在线规划指令），可用于异步发送。
+>
+> C++ 版本采用与 MoveAbsJ 一致的**三段式 demo 结构**（示例 1 同步 / 示例 2 异步 / 示例 3 扩展返回），如需实际执行双臂运动，把示例 1 的 `init_cmds` 换成 `motion_cmds` 即可。
 
 ---
 
@@ -171,15 +224,16 @@ ROBOT_IP = "192.168.2.199"
 支持直线段和圆弧段的平滑拼接运动。程序启动后出现交互菜单：
 
 ```
-first_insert  - 设置起点（当前位置）
+first_insert  - 添加起点（当前位置）
 add_line      - 添加直线轨迹点
-add_circle    - 添加圆弧轨迹点
+add_circle    - 添加圆弧轨迹点（需要中间点）
 start         - 执行轨迹
 clear_points  - 清除所有轨迹点
+show_points   - 显示当前轨迹点
 exit          - 退出程序
 ```
 
-坐标格式为 `x,y,z,q1,q2,q3,q4`（单位：米，四元数姿态）。
+坐标格式为 `x,y,z,q1,q2,q3,q4`（单位：米，四元数姿态）。添加轨迹点时可指定 `zone`（过渡区）和 `speed`（运动速度）参数。
 
 ---
 
@@ -188,11 +242,12 @@ exit          - 退出程序
 平滑轨迹运动，适合对运动柔顺性有要求的场景。菜单操作：
 
 ```
-start_moves   - 设置起点
-add_moves     - 添加轨迹点（输入格式：x,y,z,q1,q2,q3,q4）
-execute       - 执行轨迹
-clear_points  - 清空轨迹点
-exit          - 退出
+start_moves    - 设置起点（当前位置）
+add_moves      - 添加 MoveS 轨迹点（输入格式：x,y,z,q1,q2,q3,q4）
+execute        - 执行轨迹
+clear_points   - 清除所有轨迹点
+show_points    - 显示当前轨迹点
+exit           - 退出程序
 ```
 
 ---
@@ -214,18 +269,34 @@ exit          - 退出
 
 ---
 
-### JogAnyJ — 任意关节点动
+### JogAnyJ — 任意关节点动（单臂）
 
 移动机器人到指定关节角度位置。菜单操作：
 
 ```
-start   - 移动到初始位置（全零位）
+start   - 启动 JogAnyJ 控制（移动到全零位）
 stop    - 停止运动
 custom  - 手动输入目标关节角度（单位：弧度）和速度
 exit    - 停止后退出
 ```
 
 修改 `main.py` 中的 `NUM_JOINTS` 以匹配机器人轴数（默认 7）。
+
+---
+
+### JogAnyJ_Double — 任意关节点动（双臂协同）
+
+双臂版 JogAnyJ，通过 `||` 分隔符同时控制两台机械臂。菜单操作：
+
+```
+start   - 启动双臂 JogAnyJ 控制（双臂到零位）
+home    - 双臂 MoveAbsJ 回零
+stop    - 停止运动
+custom  - 输入自定义双臂关节位置（弧度）
+exit    - 停止后退出
+```
+
+`custom` 模式下需分别输入左右臂的关节角度和运动速度。修改 `NUM_JOINTS_PER_ARM` 以匹配轴数（默认 7）。
 
 ---
 
@@ -240,20 +311,26 @@ exit    - 停止后退出
 #        关节模式=0       方向           步长(rad)   关节坐标系
 ```
 
+> C++ 版本采用与 MoveAbsJ 一致的**三段式 demo 结构**（示例 1 同步 / 示例 2 异步 / 示例 3 扩展返回）。如需实际执行 JogC 步进，把示例 1 的 `init_cmds` 换成 `motion_cmds` 即可。
+
 ---
 
 ### SyncAsync — 同步/异步发送对比
 
-演示两种 RPC 发送方式的区别：
-- **同步（send_rpcsy）**：发送后等待机器人执行完毕再发下一条
-- **异步（send_rpc_async）**：发送后不等待，立即发下一条
+演示两种 RPC 发送方式的区别，启动后出现交互菜单：
 
-在 `main.py` 中通过注释/反注释切换：
-
-```python
-# arch.send_rpc_async(client, motion_cmds, 10000, 0.5)  # 异步
-arch.send_rpcsy(client, motion_cmds, 10000, 0.5)        # 同步（当前激活）
 ```
+sync    - 运行同步发送（MoveAbsJ 关节运动，逐条等待响应）
+async   - 运行异步发送（SpeedL 往返运动，快速下发不阻塞）
+compare - 同步 vs 异步 对比（先跑同步再跑异步，可对比耗时）
+clear   - 清除所有变量
+exit    - 退出程序
+```
+
+- **同步（send_rpcsy）**：发送后等待机器人执行完毕再发下一条，适合需要确认执行结果的场景
+- **异步（send_rpc_async）**：发送后不等待，立即发下一条，适合持续控制类指令（如 SpeedL）
+
+> C++ 版本和 Python 版本的菜单结构完全一致，均可交互选择模式。如需切换预设的同步/异步指令列表，修改 `sync_cmds` / `async_cmds` 即可。
 
 ---
 
@@ -303,7 +380,7 @@ DRAG_MODE = "free_drag"      # 六自由度零力拖动
 
 ### Topic — 系统状态订阅
 
-通过 ZMQ 消息总线订阅机器人实时（RT）和非实时（NRT）状态数据，Topic SDK 自带独立库文件，**不依赖** `common/py_lib/`。
+通过 ZMQ 消息总线订阅机器人实时（RT）和非实时（NRT）状态数据，Topic SDK 自带独立库文件，**不依赖** `common/rpc/`。
 
 #### Python 版本
 
@@ -360,9 +437,17 @@ std::string remote_ip = "192.168.2.140";  // 改为实际 IP
 
 ## 常见问题
 
+### Q: 运行提示 `Python 3.10 is required` 或模块加载失败
+
+**原因**：底层动态库（`.pyd` / `.so`）基于 Python 3.10 ABI 编译，其他版本（如 3.11、3.12）无法加载。
+
+**解决**：安装 Python 3.10.x，下载地址：[Python 3.10.11](https://www.python.org/downloads/release/python-31011/)。安装时勾选 **"Add Python to PATH"**。如果电脑上已安装多个 Python 版本，使用 `py -3.10 main.py`（Windows）启动器定位到 3.10。
+
+---
+
 ### Q: 运行 `python main.py` 提示 `Platform directory not found`
 
-**原因**：`common/py_lib/` 目录不存在或路径结构被破坏。
+**原因**：`common/rpc/python/` 目录不存在或路径结构被破坏。
 
 **解决**：确保你是在**完整仓库目录**下运行，不要只复制单个 SDK 文件夹。
 
@@ -386,23 +471,26 @@ std::string remote_ip = "192.168.2.140";  // 改为实际 IP
 
 ### Q: 如何切换同步/异步模式
 
-在 `main.py` 的主循环中找到以下两行，注释其中一行：
+程序启动后出现交互菜单，输入对应命令即可：
 
-```python
-# arch.send_rpc_async(client, cmds, 10000, 0.5)  # 异步：发完不等响应
-arch.send_rpcsy(client, cmds, 10000, 0.5)        # 同步：等响应后再发下一条
 ```
+sync    - 运行同步发送
+async   - 运行异步发送
+compare - 同步 vs 异步 对比
+```
+
+如需修改预设的指令内容，编辑 `main.py`（或 C++ 的 `main.cpp`）中的 `sync_cmds`（同步指令列表）和 `async_cmds`（异步指令列表）。
 
 ---
 
 ### Q: Linux 上运行提示 `cannot open shared object file`
 
-**解决**：`arch.py` 已自动配置 `LD_LIBRARY_PATH`，如果仍报错，请手动执行：
+**解决**：`rpc_client.py` 已自动配置 `LD_LIBRARY_PATH`，如果仍报错，请手动执行：
 
 ```bash
-export LD_LIBRARY_PATH=<仓库根目录>/common/py_lib/x86:$LD_LIBRARY_PATH  # x86
+export LD_LIBRARY_PATH=<仓库根目录>/common/rpc/python/x86:$LD_LIBRARY_PATH  # x86
 # 或
-export LD_LIBRARY_PATH=<仓库根目录>/common/py_lib/arm:$LD_LIBRARY_PATH  # ARM
+export LD_LIBRARY_PATH=<仓库根目录>/common/rpc/python/arm:$LD_LIBRARY_PATH  # ARM
 ```
 
 ---
@@ -417,7 +505,7 @@ your_cmds = [
 ]
 ```
 
-然后调用 `arch.send_rpcsy(client, your_cmds, 5000, 0.5)` 发送即可。
+然后调用 `send_rpcsy(client, your_cmds, 5000, 0.5)` 发送即可。
 
 ---
 

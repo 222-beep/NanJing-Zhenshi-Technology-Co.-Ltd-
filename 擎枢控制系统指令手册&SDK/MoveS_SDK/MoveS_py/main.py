@@ -1,4 +1,6 @@
-import arch
+import sys, os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
+from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
 # 初始化命令列表
 init_cmds = [
@@ -12,10 +14,14 @@ ROBOT_IP = "192.168.2.217"
 def main():
     """主函数 - MoveS 轨迹控制"""
     # 创建客户端
-    client = arch.create_client(ROBOT_IP)
+    client = RpcClient(ROBOT_IP)
+
+    if not client.is_connected():
+        print(f"Connection failed: {client.error_info()}")
+        return
     
     # 发送初始化指令
-    arch.send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, 500, 0.1)
     
     # 存储轨迹点
     trajectory_points = []
@@ -36,7 +42,7 @@ def main():
             # 设置MoveS起点
             print("设置MoveS起点（当前位置）")
             start_cmd = "{MoveS --type=first_insert}"
-            arch.send_rpcsy(client, [start_cmd], 5000, 0.5)
+            send_rpcsy(client, [start_cmd], 5000, 0.5)
             trajectory_points = []  # 清空轨迹点列表
             print("MoveS起点已设置")
             
@@ -55,11 +61,11 @@ def main():
                 # 定义目标点变量
                 point_name = f"p{len(trajectory_points) + 1}"
                 var_cmd = f"{{Var --type=robottarget --name={point_name} --value={{{','.join(map(str, values))}}}}}"
-                arch.send_rpcsy(client, [var_cmd], 5000, 0.2)
+                send_rpcsy(client, [var_cmd], 5000, 0.2)
                 
                 # 添加MoveS轨迹点指令
                 move_cmd = f"{{MoveS --type=insert --robottarget_var={point_name}}}"
-                arch.send_rpcsy(client, [move_cmd], 5000, 0.5)
+                send_rpcsy(client, [move_cmd], 5000, 0.5)
                 
                 # 记录轨迹点
                 trajectory_points.append({
@@ -81,13 +87,13 @@ def main():
                 
             print(f"开始执行MoveS轨迹，共 {len(trajectory_points)} 个轨迹点...")
             execute_cmd = "{MoveS --type=start}"
-            arch.send_rpcsy(client, [execute_cmd], 10000, 1.0)
+            send_rpcsy(client, [execute_cmd], 10000, 1.0)
             print("MoveS轨迹执行完成!")
             
         elif user_input == "clear_points":
             # 清除所有变量
             clear_var_cmd = "{Var --clear}"
-            arch.send_rpcsy(client, [clear_var_cmd], 5000, 0.5)
+            send_rpcsy(client, [clear_var_cmd], 5000, 0.5)
             trajectory_points = []
             print("所有MoveS轨迹点已清除")
             
@@ -100,7 +106,7 @@ def main():
             print("退出程序...")
             # 发送停止指令
             stop_cmd = "{Stop --last_count=10}"
-            arch.send_rpcsy(client, [stop_cmd], 5000, 1.0)
+            send_rpcsy(client, [stop_cmd], 5000, 1.0)
             break
             
         else:

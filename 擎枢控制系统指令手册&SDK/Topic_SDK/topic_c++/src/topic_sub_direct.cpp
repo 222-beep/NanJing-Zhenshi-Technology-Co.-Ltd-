@@ -1,19 +1,6 @@
 #include "system_state_reader.hpp"
-#include <iostream>
-#include <iomanip>
 #include <chrono>
 #include <thread>
-
-// 辅助函数：打印 vector<double> 的内容，限制长度
-void print_vector(const std::vector<double>& vec, size_t max_print = 6) {
-    std::cout << "[";
-    for (size_t i = 0; i < vec.size() && i < max_print; ++i) {
-        std::cout << vec[i] << (i + 1 < vec.size() ? ", " : "");
-    }
-    if (vec.size() > max_print) std::cout << "...";
-    std::cout << "]";
-}
-
 
 // ============================================================================
 // 用户自定义结构体示例 —— 用于解析子系统的 data 字段
@@ -39,7 +26,7 @@ struct TwoFingerGripperStatus {
 #pragma pack()
 
 int main() {
-    std::string remote_ip = "192.168.2.216";
+    std::string remote_ip = "192.168.2.145";
     start_subscriber(remote_ip);
 
     while (true) {

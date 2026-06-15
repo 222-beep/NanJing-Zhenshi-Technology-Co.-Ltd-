@@ -50,6 +50,13 @@ if(protoc)
 endif()
 
 if(UNIX)
+    # Ubuntu 版本选择（20.04 / 22.04）
+    set(UBUNTU_VERSION "20.04" CACHE STRING "Ubuntu version (20.04 or 22.04)")
+    if(NOT UBUNTU_VERSION MATCHES "20.04|22.04")
+        message(WARNING "Unknown Ubuntu version: ${UBUNTU_VERSION}, using 20.04")
+        set(UBUNTU_VERSION "20.04")
+    endif()
+
     # 架构检测
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
         set(LIB_ARCH_DIR "arm")
@@ -62,7 +69,11 @@ if(UNIX)
 
     # 设置库目录
     set(LIB_BASE_DIR "${CMAKE_SOURCE_DIR}/lib/linux")
-    link_directories("${LIB_BASE_DIR}/${LIB_ARCH_DIR}/Release")
+    set(LIB_FULL_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/Release")
+    if(NOT EXISTS "${LIB_FULL_DIR}")
+        message(WARNING "Library directory not found: ${LIB_FULL_DIR}")
+    endif()
+    link_directories("${LIB_FULL_DIR}")
 elseif(WIN32)
     # Windows 可根据需求添加架构判断，这里保持原样
     link_directories("${CMAKE_SOURCE_DIR}/lib/win/Release")
@@ -72,7 +83,7 @@ if(MSVC)
 	add_compile_options(/std:c++17 /Zc:preprocessor)
 endif(MSVC)
 
- SET(test src/topic_sub_direct.cpp)
+ SET(test src/main.cpp)
 
 include_directories(${GENERATED_PROTO_DIR}) 
 
@@ -83,6 +94,24 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PROTOBUF_USE_DLLS)
 target_link_libraries(${PROJECT_NAME} libprotobuf)
 target_link_libraries(${PROJECT_NAME} libzmq-v142-mt-4_3_6)
 target_link_libraries(${PROJECT_NAME} message)
+
+# 构建后将依赖 DLL 复制到可执行文件目录
+set(LIB_DLL_DIR "${CMAKE_SOURCE_DIR}/lib/win/Release")
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${LIB_DLL_DIR}/libprotobuf.dll"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${LIB_DLL_DIR}/libprotoc.dll"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${LIB_DLL_DIR}/libzmq-v142-mt-4_3_6.dll"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${LIB_DLL_DIR}/message.dll"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+    COMMENT "Copying runtime DLLs to output directory"
+)
 elseif(UNIX)
 target_link_libraries(${PROJECT_NAME} libprotobuf.so)
 target_link_libraries(${PROJECT_NAME} libzmq.so)
