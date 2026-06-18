@@ -5,6 +5,7 @@ rpc_client.py — RPC 工具模块
 import sys
 import os
 import platform
+import ctypes
 import random
 import time
 
@@ -13,7 +14,23 @@ import time
 #  平台检测 & 动态库路径设置
 # ======================================================================
 
-def _get_platform_subpath():
+def _detect_ubuntu_version():
+    """从 /etc/os-release 检测 Ubuntu 版本号，如 '20.04', '22.04'。失败返回 None。"""
+    try:
+        with open('/etc/os-release', 'r') as f:
+            for line in f:
+                if line.startswith('VERSION_ID='):
+                    version = line.strip().split('=')[1].strip('"')
+                    parts = version.split('.')
+                    if len(parts) >= 2:
+                        return f"{parts[0]}.{parts[1]}"
+                    return version
+    except Exception:
+        pass
+    return None
+
+
+def _get_platform_subdir():
     """返回 lib 下的平台子目录"""
     system = platform.system().lower()
     if system == 'windows':
@@ -26,13 +43,26 @@ def _get_platform_subpath():
             arch = 'arm'
         else:
             raise RuntimeError(f"Unsupported Linux architecture: {machine}")
-        return arch
+
+        # 检测 Ubuntu 版本，构建版本化路径 lib/linux/{arch}/{version}/
+        ubuntu_ver = _detect_ubuntu_version()
+        versions_to_try = [ubuntu_ver] if ubuntu_ver else []
+        versions_to_try += ['20.04', '22.04']  # fallback 版本列表
+
+        for v in versions_to_try:
+            candidate = os.path.join('linux', arch, v)
+            if os.path.isdir(os.path.join(_root, 'lib', candidate)):
+                return candidate
+
+        raise RuntimeError(
+            f"Platform directory not found: lib/linux/{arch}/{{20.04,22.04}}"
+        )
     else:
         raise RuntimeError(f"Unsupported OS: {system}")
 
 
 _root = os.path.dirname(os.path.abspath(__file__))
-_tdir = os.path.join(_root, _get_platform_subpath())
+_tdir = os.path.join(_root, 'lib', _get_platform_subdir())
 
 if not os.path.isdir(_tdir):
     raise RuntimeError(f"Platform directory not found: {_tdir}")
@@ -46,6 +76,8 @@ if platform.system() == 'Windows':
 elif platform.system() == 'Linux':
     _ld = os.environ.get('LD_LIBRARY_PATH', '')
     os.environ['LD_LIBRARY_PATH'] = _tdir + (':' + _ld if _ld else '')
+    # 重新加载动态库配置（使新路径生效）
+    ctypes.CDLL(None, ctypes.RTLD_GLOBAL)
 
 import rpc
 

@@ -5,8 +5,11 @@ set(CMAKE_CONFIGURATION_TYPES Release)
 set(CMAKE_CXX_STANDARD 17)
 add_definitions(-DCODEIT_1_3_0)
 
-include_directories(include)
-include_directories(include/message)
+set(TOPIC_COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/topic")
+set(TOPIC_INCLUDE_DIR "${TOPIC_COMMON_DIR}/c++/include")
+
+include_directories("${TOPIC_INCLUDE_DIR}")
+include_directories("${TOPIC_INCLUDE_DIR}/message")
 
 option(protoc "Enable proto code generation" ON)
 
@@ -17,7 +20,7 @@ set(GENERATED_HDRS)
 
 if(protoc)
   if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-    set(PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/lib/win/Release/protoc.exe")
+    set(PROTOC_EXECUTABLE "${TOPIC_COMMON_DIR}/c++/lib/win/Release/protoc.exe")
   else()
     find_program(PROTOC_EXECUTABLE protoc)
   endif()
@@ -67,20 +70,28 @@ if(UNIX)
         set(LIB_ARCH_DIR "x86")
     endif()
 
-    # 设置库目录
-    set(LIB_BASE_DIR "${CMAKE_SOURCE_DIR}/lib/linux")
-    set(LIB_FULL_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/Release")
-    if(NOT EXISTS "${LIB_FULL_DIR}")
-        message(WARNING "Library directory not found: ${LIB_FULL_DIR}")
+    # 设置库目录：shared 存放跨语言共用依赖，c++/lib 存放 C++ 专属或不可共用依赖
+    set(TOPIC_SHARED_FULL_DIR "${TOPIC_COMMON_DIR}/shared/lib/linux/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/Release")
+    set(TOPIC_CPP_LIB_FULL_DIR "${TOPIC_COMMON_DIR}/c++/lib/linux/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/Release")
+    if(EXISTS "${TOPIC_SHARED_FULL_DIR}")
+        link_directories("${TOPIC_SHARED_FULL_DIR}")
     endif()
-    link_directories("${LIB_FULL_DIR}")
+    if(EXISTS "${TOPIC_CPP_LIB_FULL_DIR}")
+        link_directories("${TOPIC_CPP_LIB_FULL_DIR}")
+    else()
+        message(WARNING "C++ library directory not found: ${TOPIC_CPP_LIB_FULL_DIR}")
+    endif()
 elseif(WIN32)
-    # Windows 可根据需求添加架构判断，这里保持原样
-    link_directories("${CMAKE_SOURCE_DIR}/lib/win/Release")
+    set(TOPIC_SHARED_FULL_DIR "${TOPIC_COMMON_DIR}/shared/lib/win/Release")
+    set(TOPIC_CPP_LIB_FULL_DIR "${TOPIC_COMMON_DIR}/c++/lib/win/Release")
+    link_directories("${TOPIC_CPP_LIB_FULL_DIR}")
+    if(EXISTS "${TOPIC_SHARED_FULL_DIR}")
+        link_directories("${TOPIC_SHARED_FULL_DIR}")
+    endif()
 endif()
 
 if(MSVC)
-	add_compile_options(/std:c++17 /Zc:preprocessor)
+	add_compile_options(/std:c++17 /Zc:preprocessor /utf-8)
 endif(MSVC)
 
  SET(test src/main.cpp)
@@ -96,19 +107,18 @@ target_link_libraries(${PROJECT_NAME} libzmq-v142-mt-4_3_6)
 target_link_libraries(${PROJECT_NAME} message)
 
 # 构建后将依赖 DLL 复制到可执行文件目录
-set(LIB_DLL_DIR "${CMAKE_SOURCE_DIR}/lib/win/Release")
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LIB_DLL_DIR}/libprotobuf.dll"
+        "${TOPIC_CPP_LIB_FULL_DIR}/libprotobuf.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LIB_DLL_DIR}/libprotoc.dll"
+        "${TOPIC_CPP_LIB_FULL_DIR}/libprotoc.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LIB_DLL_DIR}/libzmq-v142-mt-4_3_6.dll"
+        "${TOPIC_SHARED_FULL_DIR}/libzmq-v142-mt-4_3_6.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${LIB_DLL_DIR}/message.dll"
+        "${TOPIC_CPP_LIB_FULL_DIR}/message.dll"
         "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
     COMMENT "Copying runtime DLLs to output directory"
 )

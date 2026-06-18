@@ -20,9 +20,16 @@ if(UNIX)
         set(LIB_ARCH_DIR "x86")
     endif()
 
+    # Ubuntu 版本选择（20.04 / 22.04）
+    set(UBUNTU_VERSION "20.04" CACHE STRING "Ubuntu version (20.04 or 22.04)")
+    if(NOT UBUNTU_VERSION MATCHES "20.04|22.04")
+        message(WARNING "Unknown Ubuntu version: ${UBUNTU_VERSION}, using 20.04")
+        set(UBUNTU_VERSION "20.04")
+    endif()
+
     # 设置库目录
     set(LIB_BASE_DIR "${COMMON_DIR}/lib/linux")
-    set(SDK_LIB_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${SDK_LIB_VARIANT}")
+    set(SDK_LIB_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/${SDK_LIB_VARIANT}")
     link_directories("${SDK_LIB_DIR}")
 elseif(WIN32)
     # Windows 可根据需求添加架构判断，这里保持原样

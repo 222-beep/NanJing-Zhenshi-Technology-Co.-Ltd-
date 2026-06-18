@@ -10,21 +10,48 @@
 代码/
 ├── README.md                              # 本文件
 │
-├── common/rpc/                             # RPC 公共库（所有标准 SDK 的通信基础）
-│   ├── c++/                                # C++ RPC 库
-│   │   ├── include/                        #   头文件
-│   │   │   ├── robot.hpp                   #     机器人客户端封装（同步/异步发送）
-│   │   │   ├── cpp_rpc.hpp                 #     RPC 底层客户端
-│   │   │   ├── resp_dto.h                  #     响应数据类型定义
-│   │   │   ├── msg.hpp                     #     消息类型
-│   │   │   └── ...                         #     其他工具头文件
-│   │   └── lib/                            #   预编译库
-│   │       ├── win/Release/                #     Windows: cpp_rpc.dll/.lib, robot_sdk.dll/.lib
-│   │       └── linux/{x86,arm}/Release/    #     Linux: libcpp_rpc.so, librobot_sdk.so
-│   └── python/                             # Python RPC 库
-│       ├── rpc_client.py                   #   RPC 客户端封装（RpcClient, send_rpcsy,send_rpc_async）
-│       ├── __init__.py
-│       └── {win,x86,arm}/                  #   平台动态库（rpc.pyd/.so, robot_ext.pyd/.so）
+├── common/
+│   ├── rpc/                                  # RPC 公共库（所有标准 SDK 的通信基础）
+│   │   ├── c++/                              # C++ RPC 库
+│   │   │   ├── include/                      #   头文件
+│   │   │   │   ├── robot.hpp                 #     机器人客户端封装（同步/异步发送）
+│   │   │   │   ├── cpp_rpc.hpp               #     RPC 底层客户端
+│   │   │   │   ├── resp_dto.h                #     响应数据类型定义
+│   │   │   │   ├── msg.hpp                   #     消息类型
+│   │   │   │   └── ...                       #     其他工具头文件
+│   │   │   └── lib/                          #   预编译库
+│   │   │       ├── win/Release/              #     Windows: cpp_rpc.dll/.lib, robot_sdk.dll/.lib
+│   │   │       └── linux/{x86,arm}/          #     Linux（按 Ubuntu 版本分层）
+│   │   │           ├── 20.04/Release/        #       Ubuntu 20.04: libcpp_rpc.so, librobot_sdk.so
+│   │   │           └── 22.04/Release/        #       Ubuntu 22.04: libcpp_rpc.so, librobot_sdk.so
+│   │   └── python/                           # Python RPC 库
+│   │       ├── rpc_client.py                 #   RPC 客户端封装（RpcClient, send_rpcsy,send_rpc_async）
+│   │       ├── __init__.py
+│   │       └── lib/                          #   平台动态库（按 OS/架构/Ubuntu 版本分层）
+│   │           ├── win/                      #     Windows: rpc.pyd, robot_ext.pyd
+│   │           └── linux/{x86,arm}/          #     Linux（按 Ubuntu 版本分层）
+│   │               ├── 20.04/                #       rpc.so, robot_ext.so
+│   │               └── 22.04/                #       rpc.so, robot_ext.so
+│   │
+│   └── topic/                                # Topic 公共库（Topic SDK 的通信基础）
+│       ├── c++/                              # C++ 专属
+│       │   ├── include/                      #   头文件（protobuf、zmq、message 等）
+│       │   └── lib/                          #   C++ 专属预编译库 + protoc 工具
+│       │       ├── win/Release/              #     message.dll, libprotobuf.dll, protoc.exe 等
+│       │       └── linux/{x86,arm}/          #     libmessage.so + 不可共用的 protobuf/zmq
+│       │           ├── 20.04/Release/
+│       │           └── 22.04/Release/
+│       ├── python/                           # Python 专属
+│       │   └── lib/                          #   topic.so/pyd + 不可共用的 protobuf/zmq
+│       │       ├── win/                      #     topic.pyd, libprotobuf.dll
+│       │       └── linux/{x86,arm}/          #     topic.so
+│       │           ├── 20.04/
+│       │           └── 22.04/
+│       └── shared/lib/                       # C++/Python 共享的第三方依赖
+│           ├── win/Release/                  #     libzmq-v142-mt-4_3_6.dll
+│           └── linux/{x86,arm}/              #     libprotobuf.so, libprotobuf.so.32, libzmq.so 等
+│               ├── 20.04/Release/
+│               └── 22.04/Release/
 │
 ├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动
 ├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
@@ -87,7 +114,7 @@
 │    └── Python: rpc_client.py + .pyd/.so            │
 ├──────────────────────────────────────────────────┤
 │ ② Topic_SDK    独立编译（与 ① 无依赖关系）          │
-│    依赖：自带的 lib/win/ 或 lib/linux/              │
+│    依赖：common/topic/ 公共库                        │
 ├──────────────────────────────────────────────────┤
 │ ③ 其余 13 个标准 RPC SDK                           │
 │    均依赖 ① common/rpc/，彼此独立无先后顺序          │
@@ -115,7 +142,7 @@
 | 项目 | 要求 |
 |------|------|
 | Python | 3.10 |
-| 操作系统 | Windows 10/11、Ubuntu 20.04+ 或其他 Linux |
+| 操作系统 | Windows 10/11、Ubuntu 20.04 / 22.04 或其他 Linux |
 | 依赖库 | 预编译的动态库（已包含在项目中），无需额外安装 |
 
 ### 支持的操作系统和架构
@@ -150,8 +177,8 @@
 | 平台 | CMake | 编译器 | 架构 |
 |------|-------|--------|------|
 | Windows | 4.0.2 | MSVC (Visual Studio 2022) | x64 |
-| Linux (x86) | 3.16.3 | GCC 9.4.0 | x86/x64 |
-| Linux (ARM) | 3.22.1 | GCC 11.4.0 | ARM/ARM64 |
+| Linux (x86, Ubuntu 20.04) | 3.16.3 | GCC 9.4.0 | x86/x64 |
+| Linux (ARM, Ubuntu 22.04) | 3.22.1 | GCC 11.4.0 | ARM/ARM64 |
 
 ---
 
@@ -175,7 +202,7 @@ cmake --build . --config Release
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=20.04  # 或 22.04，根据实际系统版本选择
 make
 ```
 
@@ -183,7 +210,7 @@ make
 
 ### Topic SDK 编译（独立）
 
-Topic SDK 使用自带的 ZeroMQ + Protobuf 库，**不依赖** `common/rpc/`。
+Topic SDK 使用独立的 ZeroMQ + Protobuf 通信栈，**不依赖** `common/rpc/`，其公共库统一收口在 `common/topic/` 下。
 
 **Windows：**
 
@@ -199,13 +226,11 @@ cmake --build . --config Release
 ```bash
 cd Topic_SDK/topic_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=20.04  # 或 22.04，根据实际系统版本选择
 make
 ```
 
-编译完成后同样会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录。
-
-Linux 平台可通过 `-DUBUNTU_VERSION=20.04` 或 `-DUBUNTU_VERSION=22.04` 指定 Ubuntu 版本以选择正确的库目录。
+编译完成后会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录。
 
 ---
 
@@ -218,7 +243,7 @@ Python SDK 无需编译，所有模块开箱即用。
 python MoveAbsJ_SDK/MoveAbsJ_py/main.py
 ```
 
-`rpc_client.py` 会自动检测操作系统和架构，加载 `common/rpc/python/` 下匹配当前平台的 `.pyd`/`.so` 动态库。
+`rpc_client.py` 会自动检测操作系统、架构和 Ubuntu 版本，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下优先检测当前 Ubuntu 版本（20.04 / 22.04），检测失败时按 20.04 → 22.04 顺序 fallback。
 
 ---
 
@@ -233,20 +258,46 @@ set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 ```
 
-编译时自动根据平台选择对应库文件：
+编译时自动根据平台和 Ubuntu 版本选择对应库文件：
 - **Windows**: `common/rpc/c++/lib/win/Release/`
-- **Linux x86**: `common/rpc/c++/lib/linux/x86/Release/`
-- **Linux ARM**: `common/rpc/c++/lib/linux/arm/Release/`
+- **Linux x86**: `common/rpc/c++/lib/linux/x86/{20.04,22.04}/Release/`
+- **Linux ARM**: `common/rpc/c++/lib/linux/arm/{20.04,22.04}/Release/`
+
+Linux 平台可通过 CMake 参数指定 Ubuntu 版本（默认 `20.04`）：
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=22.04
+```
+
+### Topic SDK
+
+Topic SDK 的 `CMakeLists.txt` 通过相对路径引用 `common/topic/` 下的公共库，**禁止各 SDK 独立复制**：
+
+```cmake
+set(TOPIC_COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/topic")
+include_directories("${TOPIC_COMMON_DIR}/c++/include")
+```
+
+库文件按三层目录组织：
+- **shared/lib/**：C++/Python 共用的第三方依赖（protobuf、zmq）
+- **c++/lib/**：C++ 专属库（message）及不可共用的 protobuf/zmq
+- **python/lib/**：Python 专属扩展（topic.so/pyd）及不可共用的 protobuf/zmq
+
+编译时自动根据平台和 Ubuntu 版本选择对应库文件：
+- **Windows**: `common/topic/{shared,c++}/lib/win/Release/`
+- **Linux x86**: `common/topic/{shared,c++}/lib/linux/x86/{20.04,22.04}/Release/`
+- **Linux ARM**: `common/topic/{shared,c++}/lib/linux/arm/{20.04,22.04}/Release/`
 
 ### Python SDK
 
-每个 SDK 的 `main.py` 通过 `sys.path` 引用公共 RPC 模块：
+每个标准 SDK 的 `main.py` 通过 `sys.path` 引用公共 RPC 模块：
 
 ```python
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python'))
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 ```
+
+Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、架构和 Ubuntu 版本，从 `common/topic/python/lib/` 和 `common/topic/shared/lib/` 加载匹配的动态库。
 
 ---
 
@@ -287,7 +338,7 @@ RPC 指令字符串遵循控制器指令语法，大括号包裹：`{指令名 -
 
 ### 6. Topic SDK 特殊说明
 
-Topic SDK 使用独立的 ZeroMQ + Protobuf 通信栈，**不依赖** `common/rpc/`。数据订阅端口固定为 **19091**。支持两种数据获取方式：
+Topic SDK 使用独立的 ZeroMQ + Protobuf 通信栈，**不依赖** `common/rpc/`，其公共库统一收口在 `common/topic/` 下。数据订阅端口固定为 **19091**。支持两种数据获取方式：
 - **Direct 模式**：直接调用自由函数，适合快速获取少量字段
 - **Snapshot 模式**：先获取快照再逐字段访问，适合批量读取
 
