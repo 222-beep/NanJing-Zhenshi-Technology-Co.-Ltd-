@@ -37,11 +37,11 @@ sudo apt install python3.10
 
 ### 2. 拷贝文件
 
-将整个 `topic_all_py/` 目录拷贝到目标机器。
+将整个 `Topic_SDK/topic_py/` 目录拷贝到目标机器。
 
 ### 3. 验证
 
-在 `topic_all_py` 目录下运行：
+在 `topic_py` 目录下运行：
 
 ```bash
 python3.10 -c "from platform_loader import get_topic_module; t = get_topic_module(); print('OK:', t)"
