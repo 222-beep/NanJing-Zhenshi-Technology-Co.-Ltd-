@@ -6,6 +6,10 @@
 
 ## 2026-06-29
 
+### SDK 使用手册格式更换
+
+- **替换** `SDK使用手册.docx` 为 `SDK使用手册.pdf`（PDF 格式更便于分发和查看）
+
 ### 更新擎枢控制系统最小上位机例程
 
 - **删除** `topic+rpc_c++` 目录（原 Topic + RPC 通信示例）
@@ -13,7 +17,7 @@
   - `Base_function_SDK_c++.zip` — 高层指令封装 SDK（C++），在 Base_SDK 基础上将函数封装为指令接口，支持单臂/双臂/多臂指令发送，同时含 `robot_state` 状态订阅模块
   - `Base_SDk.zip` — 基础 SDK（C++ & Python 双语言），包含底层 RPC 客户端（`robot_command`）和状态订阅（`robot_state`，基于 ZMQ + Protobuf），提供基础通信能力
   - `Ros.zip` — ROS1 集成包，含 `robot_demo_system`、`user_receiver` 示例及 MuJoCo 仿真工作空间（`mujoco_ros1`、`topic_to_mujoco`）
-  - `SDK使用手册.docx` — SDK 使用手册（Word 文档）
+  - `SDK使用手册.pdf` — SDK 使用手册（PDF 文档）
 - **更新** 根目录 `README.md`，补充各压缩包详细说明
 
 ---
