@@ -41,14 +41,14 @@
 
 ### 3. 擎枢控制系统最小上位机例程
 
-包含以下资源包，方便用户快速集成与上手：
+包含以下资源包，帮助用户快速集成机器人通信与控制：
 
 | 文件 | 说明 |
 |------|------|
-| `Base_function_SDK_c++.zip` | 基础功能 SDK（C++）例程包 |
-| `Base_SDk.zip` | 基础 SDK 资源包 |
-| `Ros.zip` | ROS 集成 SDK 资源包 |
-| `SDK使用手册.docx` | SDK 使用手册 |
+| `Base_function_SDK_c++.zip` | 基础功能 SDK（C++）：含 `robot_command`（指令发送，支持单臂/双臂/多臂）和 `robot_state`（状态订阅，ZMQ + Protobuf） |
+| `Base_SDk.zip` | 基础 SDK（C++ & Python 双语言）：同上功能，额外提供 Python 版本及运行时 `robot_runtime.py` |
+| `Ros.zip` | ROS1 集成包：含 `robot_demo_system`、`user_receiver` 示例及 MuJoCo 仿真工作空间（`mujoco_ros1`、`topic_to_mujoco`） |
+| `SDK使用手册.docx` | SDK 使用手册（Word 文档） |
 
 ---
 
