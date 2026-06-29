@@ -45,8 +45,8 @@
 
 | 文件 | 说明 |
 |------|------|
-| `Base_function_SDK_c++.zip` | 基础功能 SDK（C++）：含 `robot_command`（指令发送，支持单臂/双臂/多臂）和 `robot_state`（状态订阅，ZMQ + Protobuf） |
-| `Base_SDk.zip` | 基础 SDK（C++ & Python 双语言）：同上功能，额外提供 Python 版本及运行时 `robot_runtime.py` |
+| `Base_function_SDK_c++.zip` | 高层指令封装 SDK（C++）：在 Base_SDK 基础上将函数封装为指令接口，支持单臂/双臂/多臂指令发送（`command.hpp`、`dual_arm_command.hpp`、`multi_arm_command.hpp`），同时含 `robot_state` 状态订阅 |
+| `Base_SDk.zip` | 基础 SDK（C++ & Python 双语言）：底层 RPC 客户端（`robot_command`）+ 状态订阅（`robot_state`，ZMQ + Protobuf），提供基础通信能力 |
 | `Ros.zip` | ROS1 集成包：含 `robot_demo_system`、`user_receiver` 示例及 MuJoCo 仿真工作空间（`mujoco_ros1`、`topic_to_mujoco`） |
 | `SDK使用手册.docx` | SDK 使用手册（Word 文档） |
 
