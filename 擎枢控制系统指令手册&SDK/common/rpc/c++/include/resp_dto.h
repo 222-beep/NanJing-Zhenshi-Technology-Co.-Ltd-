@@ -7,7 +7,7 @@
 //        JSON 多出某个字段 → 自动忽略（不报错）
 // ==================================================================
 
-#include "easy_json.h"
+#include "util/reflection/easy_json.h"
 #include <cstdint>
 #include <vector>
 
@@ -129,7 +129,7 @@ struct RespPrinter<PointChooseIDMoveResp> {
 //  };
 //
 //  // ---- 步骤 3：在 main.cpp 中使用 -------------------------------
-//  send_rpcsy<YourCmdResp>(client, cmds, 500, 100);
+//  send_rpcsy<YourCmdResp>(client, cmds, 100, 500);
 //
 //  // ---- 步骤 4：在代码中拿到返回值 -------------------------------
 //  auto res = client.CallAwait<YourCmdResp>(msg, timeout);

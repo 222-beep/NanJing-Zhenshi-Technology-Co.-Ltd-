@@ -32,7 +32,7 @@ def main():
         return
     
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
     
     # 主循环 - 等待用户输入控制JogAnyJ
     while True:
@@ -46,11 +46,11 @@ def main():
         
         if user_input == "start":
             print("启动JogAnyJ控制!")
-            send_rpcsy(client, Jog_start, 5000, 1.0)
+            send_rpcsy(client, Jog_start, timeout_ms=5000, sleep_s=1.0)
             print("机器人已移动到初始位置")
             
         elif user_input == "stop":
-            send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)
             print("运动已停止!")
             
         elif user_input == "custom":
@@ -69,7 +69,7 @@ def main():
                 # 构建自定义指令
                 custom_cmd = f"{{JogAnyJ --joint_pos={{{','.join(map(str, joints))}}} --joint_vel={speed} --joint_acc={0.5} --joint_dec={0.5}}}"
                 print(f"执行指令: {custom_cmd}")
-                send_rpcsy(client, [custom_cmd], 5000, 1.0) 
+                send_rpcsy(client, [custom_cmd], timeout_ms=5000, sleep_s=1.0)
                 
             except ValueError:
                 print("输入格式错误! 请确保输入的是数字。")
@@ -78,7 +78,7 @@ def main():
                 
         elif user_input == "exit":
             print("退出程序...")
-            arch.send_rpcsy(client, Jog_stop, 5000, 1.0)  # 确保停止运动
+            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)  # 确保停止运动
             break
             
         else:

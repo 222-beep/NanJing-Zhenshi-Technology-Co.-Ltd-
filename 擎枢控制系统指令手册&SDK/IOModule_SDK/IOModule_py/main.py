@@ -38,7 +38,7 @@ def main():
         return
 
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
     print("初始化完成")
 
     while True:
@@ -51,15 +51,15 @@ def main():
         user_input = input("请输入命令: ").strip().lower()
 
         if user_input == "getdi":
-            send_rpcsy(client, getdi_cmds, 5000, 0.5)
+            send_rpcsy(client, getdi_cmds, timeout_ms=5000, sleep_s=0.5)
             print("[GetDI] 指令已发送")
 
         elif user_input == "setdo":
-            send_rpcsy(client, setdo_cmds, 5000, 0.5)
+            send_rpcsy(client, setdo_cmds, timeout_ms=5000, sleep_s=0.5)
             print("[SetDO] 指令已发送")
 
         elif user_input == "dopulse":
-            send_rpcsy(client, dopulse_cmds, 5000, 0.5)
+            send_rpcsy(client, dopulse_cmds, timeout_ms=5000, sleep_s=0.5)
             print("[DOPulse] 指令已发送")
 
         elif user_input == "exit":

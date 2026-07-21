@@ -68,7 +68,7 @@ def custom_joganyj_motion(client):
             left_joints, right_joints, speed, joint_acc, joint_dec
         )
         print(f"执行指令: {custom_cmd}")
-        send_rpcsy(client, [custom_cmd], 5000, 1.0)
+        send_rpcsy(client, [custom_cmd], timeout_ms=5000, sleep_s=1.0)
 
     except ValueError:
         print("输入格式错误! 请确保输入的是数字。")
@@ -84,7 +84,7 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
 
     while True:
         print("\n可用命令:")
@@ -98,15 +98,15 @@ def main():
 
         if user_input == "start":
             print("启动双臂 JogAnyJ 控制，双臂到零位!")
-            send_rpcsy(client, Jog_start, 5000, 1.0)
+            send_rpcsy(client, Jog_start, timeout_ms=5000, sleep_s=1.0)
             print("双臂已移动到初始位置")
 
         elif user_input == "home":
             print("双臂回零位(MoveAbsJ)...")
-            send_rpcsy(client, home_cmds, 50000, 0.5)
+            send_rpcsy(client, home_cmds, timeout_ms=50000, sleep_s=0.5)
 
         elif user_input == "stop":
-            send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)
             print("运动已停止!")
 
         elif user_input == "custom":
@@ -114,7 +114,7 @@ def main():
 
         elif user_input == "exit":
             print("退出程序...")
-            send_rpcsy(client, Jog_stop, 5000, 1.0)
+            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)
             break
 
         else:

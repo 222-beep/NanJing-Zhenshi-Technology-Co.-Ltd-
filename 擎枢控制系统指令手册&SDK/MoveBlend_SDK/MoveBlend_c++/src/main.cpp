@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -69,10 +69,13 @@ static void print_vector(const vector<double>& values) {
 }
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     const std::string robot_ip = "192.168.2.199";
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
 
     vector<TrajectoryPoint> trajectory_points;
     string user_input;
@@ -95,7 +98,7 @@ int main() {
 
         if (user_input == "first_insert") {
             cout << "设置起点（当前位置）" << endl;
-            robot::send_rpcsy(*client, {"{MoveBlend --type=first_insert}"}, 5000, 500);
+            send_rpcsy<RespDemo>(client, {"{MoveBlend --type=first_insert}"}, 500, 5000);
 
             trajectory_points.clear();
             cout << "起点已设置" << endl;
@@ -138,8 +141,8 @@ int main() {
                     " --zone=" + zone +
                     " --speed=" + speed + "}";
 
-                robot::send_rpcsy(*client, {var_cmd}, 5000, 200);
-                robot::send_rpcsy(*client, {line_cmd}, 5000, 500);
+                send_rpcsy<RespDemo>(client, {var_cmd}, 200, 5000);
+                send_rpcsy<RespDemo>(client, {line_cmd}, 500, 5000);
 
                 trajectory_points.push_back({
                     point_name, "line", values, {}, {}, zone, speed
@@ -204,8 +207,8 @@ int main() {
                     " --zone=" + zone +
                     " --speed=" + speed + "}";
 
-                robot::send_rpcsy(*client, {var_mid_cmd, var_target_cmd}, 5000, 200);
-                robot::send_rpcsy(*client, {circle_cmd}, 5000, 500);
+                send_rpcsy<RespDemo>(client, {var_mid_cmd, var_target_cmd}, 200, 5000);
+                send_rpcsy<RespDemo>(client, {circle_cmd}, 500, 5000);
 
                 trajectory_points.push_back({
                     target_name, "circle", {}, mid_values, target_values, zone, speed
@@ -226,12 +229,12 @@ int main() {
             }
 
             cout << "开始执行轨迹，共 " << trajectory_points.size() << " 个轨迹点..." << endl;
-            robot::send_rpcsy(*client, {"{MoveBlend --type=start}"}, 10000, 1000);
+            send_rpcsy<RespDemo>(client, {"{MoveBlend --type=start}"}, 1000, 10000);
             cout << "轨迹执行完成!" << endl;
         }
 
         else if (user_input == "clear_points") {
-            robot::send_rpcsy(*client, {"{Var --clear}"}, 5000, 500);
+            send_rpcsy<RespDemo>(client, {"{Var --clear}"}, 500, 5000);
             trajectory_points.clear();
             cout << "所有轨迹点已清除" << endl;
         }
@@ -259,7 +262,7 @@ int main() {
 
         else if (user_input == "exit") {
             cout << "退出程序..." << endl;
-            robot::send_rpcsy(*client, {"{Stop --last_count=10}"}, 5000, 1000);
+            send_rpcsy<RespDemo>(client, {"{Stop --last_count=10}"}, 1000, 5000);
             break;
         }
 

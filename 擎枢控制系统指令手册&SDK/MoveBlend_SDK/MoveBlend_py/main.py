@@ -21,7 +21,7 @@ def main():
         return
     
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
     
     # 存储轨迹点
     trajectory_points = []
@@ -44,7 +44,7 @@ def main():
             # 设置起点
             print("设置起点（当前位置）")
             start_cmd = "{MoveBlend --type=first_insert}"
-            send_rpcsy(client, [start_cmd], 5000, 0.5)
+            send_rpcsy(client, [start_cmd], timeout_ms=5000, sleep_s=0.5)
             trajectory_points = []# 存储用户添加的轨迹点
             current_trajectory_type = "line"
             print("起点已设置")
@@ -79,11 +79,11 @@ def main():
                 # 定义目标点变量
                 point_name = f"p{len(trajectory_points) + 1}"
                 var_cmd = f"{{Var --type=robottarget --name={point_name} --value={{{','.join(map(str, values))}}}}}"
-                send_rpcsy(client, [var_cmd], 5000, 0.2)
+                send_rpcsy(client, [var_cmd], timeout_ms=5000, sleep_s=0.2)
                 
                 # 添加直线轨迹点
                 line_cmd = f"{{MoveBlend --type=insert_line --robottarget_var={point_name} --zone={zone} --speed={speed}}}"
-                send_rpcsy(client, [line_cmd], 5000, 0.5)
+                send_rpcsy(client, [line_cmd], timeout_ms=5000, sleep_s=0.5)
                 
                 trajectory_points.append({
                     "name": point_name,
@@ -136,11 +136,11 @@ def main():
                 var_mid_cmd = f"{{Var --type=robottarget --name={mid_name} --value={{{','.join(map(str, mid_values))}}}}}"
                 var_target_cmd = f"{{Var --type=robottarget --name={target_name} --value={{{','.join(map(str, target_values))}}}}}"
                 
-                send_rpcsy(client, [var_mid_cmd, var_target_cmd], 5000, 0.2)
+                send_rpcsy(client, [var_mid_cmd, var_target_cmd], timeout_ms=5000, sleep_s=0.2)
                 
                 # 添加圆弧轨迹点
                 circle_cmd = f"{{MoveBlend --type=insert_circle --mid_robottarget_var={mid_name} --robottarget_var={target_name} --zone={zone} --speed={speed}}}"
-                send_rpcsy(client, [circle_cmd], 5000, 0.5)
+                send_rpcsy(client, [circle_cmd], timeout_ms=5000, sleep_s=0.5)
                 
                 trajectory_points.append({
                     "name": target_name,
@@ -164,13 +164,13 @@ def main():
                 
             print(f"开始执行轨迹，共 {len(trajectory_points)} 个轨迹点...")
             execute_cmd = "{MoveBlend --type=start}"
-            send_rpcsy(client, [execute_cmd], 10000, 1.0)
+            send_rpcsy(client, [execute_cmd], timeout_ms=10000, sleep_s=1.0)
             print("轨迹执行完成!")
             
         elif user_input == "clear_points":
             # 清除所有变量
             clear_var_cmd = "{Var --clear}"
-            send_rpcsy(client, [clear_var_cmd], 5000, 0.5)
+            send_rpcsy(client, [clear_var_cmd], timeout_ms=5000, sleep_s=0.5)
             trajectory_points = []
             print("所有轨迹点已清除")
             
@@ -186,7 +186,7 @@ def main():
             print("退出程序...")
             # 发送停止指令
             stop_cmd = "{Stop --last_count=10}"
-            send_rpcsy(client, [stop_cmd], 5000, 1.0)
+            send_rpcsy(client, [stop_cmd], timeout_ms=5000, sleep_s=1.0)
             break
             
         else:

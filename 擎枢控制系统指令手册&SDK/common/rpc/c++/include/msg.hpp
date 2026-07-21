@@ -203,3 +203,29 @@ namespace core
 }
 
 #endif
+
+// // 自定义消息结构
+// #include <iostream>
+
+// #ifndef __COMMUNICATOR_MSG__
+// #define __COMMUNICATOR_MSG__
+
+// struct MsgHead
+// {
+//     uint64_t msg_id;
+// };
+
+// struct Msg {
+//     std::string header;
+//     std::string body;
+
+//     Msg(const std::string& header, const std::string& body)
+//         : header(header), body(body) {}
+
+//     // 用于输出调试信息
+//     friend std::ostream& operator<<(std::ostream& os, const Msg& msg) {
+//         os << "Header: " << msg.header << ", Body: " << msg.body;
+//         return os;
+//     }
+// };
+// #endif // !__COMMUNICATOR_MSG__

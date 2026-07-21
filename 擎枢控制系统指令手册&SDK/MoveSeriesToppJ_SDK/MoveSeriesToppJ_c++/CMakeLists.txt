@@ -3,37 +3,51 @@ cmake_minimum_required(VERSION 3.12)
 project(MoveSeriesToppJ2)
 #set(CMAKE_CONFIGURATION_TYPES Release)
 
+# 统一 C++17 标准（GCC/Clang/MSVC 均生效，避免 inline 变量、结构化绑定等特性报警告）
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 include_directories("${COMMON_DIR}/include/message")
-
-set(SDK_LIB_VARIANT "Release" CACHE STRING "SDK library variant directory (for example: Release/Debug/V1)")
 
 if(UNIX)
     # 架构检测
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
         set(LIB_ARCH_DIR "arm")
+        set(DEFAULT_LIB_UBUNTU_VERSION "2204")
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|i386|i686")
         set(LIB_ARCH_DIR "x86")
+        set(DEFAULT_LIB_UBUNTU_VERSION "2004")
     else()
         message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}, using x86")
         set(LIB_ARCH_DIR "x86")
+        set(DEFAULT_LIB_UBUNTU_VERSION "2004")
     endif()
 
-    # Ubuntu 版本选择（20.04 / 22.04）
-    set(UBUNTU_VERSION "20.04" CACHE STRING "Ubuntu version (20.04 or 22.04)")
-    if(NOT UBUNTU_VERSION MATCHES "20.04|22.04")
-        message(WARNING "Unknown Ubuntu version: ${UBUNTU_VERSION}, using 20.04")
-        set(UBUNTU_VERSION "20.04")
+    # Ubuntu version directory. Override with:
+    #   cmake -DLIB_UBUNTU_VERSION=2204 ..
+    if(NOT DEFINED LIB_UBUNTU_VERSION)
+        if(EXISTS "/etc/os-release")
+            file(STRINGS "/etc/os-release" OS_RELEASE_VERSION REGEX "^VERSION_ID=")
+            string(REGEX REPLACE "^VERSION_ID=\"?([0-9]+)\\.([0-9]+).*" "\\1\\2" DETECTED_UBUNTU_VERSION "${OS_RELEASE_VERSION}")
+            if(DETECTED_UBUNTU_VERSION MATCHES "^(2004|2204)$")
+                set(LIB_UBUNTU_VERSION "${DETECTED_UBUNTU_VERSION}")
+            else()
+                set(LIB_UBUNTU_VERSION "${DEFAULT_LIB_UBUNTU_VERSION}")
+            endif()
+        else()
+            set(LIB_UBUNTU_VERSION "${DEFAULT_LIB_UBUNTU_VERSION}")
+        endif()
     endif()
 
     # 设置库目录
     set(LIB_BASE_DIR "${COMMON_DIR}/lib/linux")
-    set(SDK_LIB_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/${SDK_LIB_VARIANT}")
+    set(SDK_LIB_DIR "${LIB_BASE_DIR}/${LIB_ARCH_DIR}/${LIB_UBUNTU_VERSION}/Release")
+    message(STATUS "Using Linux rpc library: ${SDK_LIB_DIR}")
     link_directories("${SDK_LIB_DIR}")
 elseif(WIN32)
-    # Windows 平台库目录
-    set(SDK_LIB_DIR "${COMMON_DIR}/lib/win/${SDK_LIB_VARIANT}")
+    set(SDK_LIB_DIR "${COMMON_DIR}/lib/win/Release")
     link_directories("${SDK_LIB_DIR}")
 endif()
 
@@ -48,6 +62,7 @@ endif(UNIX)
 # /Zc:preprocessor 需要 VS 2019 16.6+ (MSVC_VERSION >= 1926)
 # VS 2017 不支持此选项，仅启用 /std:c++17 /utf-8
 if(MSVC)
+	add_compile_definitions(NOMINMAX)
 	if(MSVC_VERSION GREATER_EQUAL 1926)
 		add_compile_options(/std:c++17 /Zc:preprocessor /utf-8)
 	else()
@@ -64,9 +79,6 @@ if(WIN32)
     add_custom_command(TARGET MoveSeriesToppJ2 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             "${SDK_LIB_DIR}/cpp_rpc.dll"
-            "$<TARGET_FILE_DIR:MoveSeriesToppJ2>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${SDK_LIB_DIR}/robot_sdk.dll"
             "$<TARGET_FILE_DIR:MoveSeriesToppJ2>"
     )
 elseif(UNIX)

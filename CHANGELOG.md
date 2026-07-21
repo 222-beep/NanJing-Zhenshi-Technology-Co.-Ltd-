@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-21
+
+### 更新擎枢控制系统指令手册&SDK（RPC 公共库重构）
+
+- **RPC 库重构**：`common/rpc/` 全面重构，影响全部 14 个 SDK 示例
+  - **C++ API 入口变更**：由 `#include "robot.hpp"` 改为 `#include "rpc_client.h"`
+  - **C++ include**：移除内置 `google/protobuf/` 头文件树、`zmq.h/hpp`、`tdsocket_global.h`、`robot.hpp`；新增 `task_pool.hpp`、`message/rpc_client.h`；JSON 工具（`easy_json.h`、`json.hpp`）移至 `util/reflection/`
+  - **C++ lib**：移除 `robot_sdk`（dll/lib/so），仅保留 `cpp_rpc`；平台目录命名调整（`20.04→2004`、`22.04→2204`）
+  - **Python lib**：移除 `robot_ext`（so/pyd），仅保留 `rpc`；平台目录命名同步调整
+- **全部 14 个 SDK 示例更新**：各模块 `main.cpp`、`main.py`、`CMakeLists.txt` 均改用新版 RPC 客户端 API 与库引用路径
+- **文档修正**：SDK README 模块计数由 15 个更正为 14 个（Topic 为独立通信库，不与 13 个标准 RPC SDK 重复计入）；同步更新根目录 `README.md`
+
+---
+
 ## 2026-06-29
 
 ### SDK 使用手册格式更换

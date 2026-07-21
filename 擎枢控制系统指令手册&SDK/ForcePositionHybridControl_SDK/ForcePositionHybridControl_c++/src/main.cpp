@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <atomic>
 #include <chrono>
 #include <csignal>
@@ -29,6 +29,9 @@ void on_sigint(int) {
 } // namespace
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     std::signal(SIGINT, on_sigint);
 
     const std::vector<std::string> init_cmds = {
@@ -86,15 +89,15 @@ int main() {
     }
     const std::vector<std::string>& drag_cmds = *it->second;
 
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // Python: send_rpcsy(..., 500, 0.1) -> 此处 sleep 与 py 一致用 100ms
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
 
     try {
         // ForcePositionHybridControl 是持续型控制，不要在循环里一直重复发
         // Python: send_rpc_async(..., 86400000, 0.1)
-        robot::send_rpc_async(*client, drag_cmds, 86400000, 100);
+        send_rpcAsy(client, drag_cmds, 100, 86400000);
 
         while (g_run) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -104,7 +107,7 @@ int main() {
     }
 
     try {
-        robot::send_rpcsy(*client, stop_cmds, 1000, 100);
+        send_rpcsy<RespDemo>(client, stop_cmds, 100, 1000);
         std::cout << "Stop command sent.\n";
     } catch (const std::exception& exc) {
         std::cerr << "Failed to send Stop: " << exc.what() << "\n";

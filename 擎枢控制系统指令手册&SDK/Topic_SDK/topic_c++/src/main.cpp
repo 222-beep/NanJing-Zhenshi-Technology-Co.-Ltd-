@@ -20,6 +20,9 @@ struct TwoFingerGripperYSStatus {
 #pragma pack()
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     std::string remote_ip = "192.168.2.145";  // 请修改为实际发布者 IP
     start_subscriber(remote_ip);
     std::cout << "Subscriber started, listening to " << remote_ip << ":19091" << std::endl;

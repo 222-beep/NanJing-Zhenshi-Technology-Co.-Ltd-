@@ -52,12 +52,12 @@ def main():
         return
 
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)  # 同步rpc (client, 指令)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)  # 同步rpc (client, 指令)
     
     # 主循环发送运动指令
     while True:
-        #send_rpc_async(client, motion_cmds, 10000, 0.5)  # 异步rpc
-        send_rpcsy(client, motion_cmds, 10000, 0.5)
+        #send_rpc_async(client, motion_cmds, timeout_ms=10000, wait_s=0.5)  # 异步rpc
+        send_rpcsy(client, motion_cmds, timeout_ms=10000, sleep_s=0.5)
 
 
 # 程序入口

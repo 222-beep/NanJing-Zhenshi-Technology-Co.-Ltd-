@@ -33,7 +33,7 @@ def main():
         return
     
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)  # 同步rpc (client, 指令)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)  # 同步rpc (client, 指令)
     
     # 主循环 - 等待用户输入控制拖动
     while True: 
@@ -41,11 +41,11 @@ def main():
         
         if user_input == "start":
             print("Start DragInCST!!!")
-            send_rpcsy(client, Dra_sta, 5000, 1.0)  # 超时5秒，间隔1秒
+            send_rpcsy(client, Dra_sta, timeout_ms=5000, sleep_s=1.0)  # 超时5秒，间隔1秒
             user_input = input("Stop dragging in CST? (stop): ").strip().lower()
             
         elif user_input == "stop":
-            send_rpcsy(client, Dra_stp, 5000, 1.0)
+            send_rpcsy(client, Dra_stp, timeout_ms=5000, sleep_s=1.0)
             print("Dragging stopped!!")
             print()
             

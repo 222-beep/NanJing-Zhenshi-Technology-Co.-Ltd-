@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -52,23 +52,26 @@ static double elapsed_sec(chrono::steady_clock::time_point start) {
 static void demo_sync(cpp_rpc::CPPClient& client) {
     cout << "\n[同步发送] 开始，共 " << sync_cmds.size() << " 条指令" << endl;
     auto t0 = chrono::steady_clock::now();
-    robot::send_rpcsy(client, sync_cmds, 10000, 500);
+    send_rpcsy<RespDemo>(client, sync_cmds, 500, 10000);
     cout << "[同步发送] 完成，耗时 " << elapsed_sec(t0) << " 秒" << endl;
 }
 
 static void demo_async(cpp_rpc::CPPClient& client) {
     cout << "\n[异步发送] 开始，共 " << async_cmds.size() << " 条指令" << endl;
     auto t0 = chrono::steady_clock::now();
-    robot::send_rpc_async(client, async_cmds, 10000, 500);
+    send_rpcAsy(client, async_cmds, 500, 10000);
     cout << "[异步发送] 完成，耗时 " << elapsed_sec(t0) << " 秒" << endl;
 }
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     const std::string robot_ip = "192.168.2.241";
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 发送初始化指令
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
     cout << "初始化完成" << endl;
 
     string user_input;
@@ -88,23 +91,23 @@ int main() {
         for (auto& c : user_input) c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
 
         if (user_input == "sync") {
-            demo_sync(*client);
+            demo_sync(client);
         }
         else if (user_input == "async") {
-            demo_async(*client);
+            demo_async(client);
         }
         else if (user_input == "compare") {
-            demo_sync(*client);
-            demo_async(*client);
+            demo_sync(client);
+            demo_async(client);
             cout << "\n对比完成" << endl;
         }
         else if (user_input == "clear") {
-            robot::send_rpcsy(*client, {"{Var --clear}"}, 5000, 500);
+            send_rpcsy<RespDemo>(client, {"{Var --clear}"}, 500, 5000);
             cout << "所有变量已清除" << endl;
         }
         else if (user_input == "exit") {
             cout << "退出程序..." << endl;
-            robot::send_rpcsy(*client, {"{Stop --last_count=10}"}, 5000, 1000);
+            send_rpcsy<RespDemo>(client, {"{Stop --last_count=10}"}, 1000, 5000);
             break;
         }
         else {

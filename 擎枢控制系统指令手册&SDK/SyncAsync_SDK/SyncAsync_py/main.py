@@ -47,7 +47,7 @@ def demo_sync(client):
     """同步发送：每条等待响应后再发送下一条"""
     print(f"\n[同步发送] 开始，共 {len(sync_cmds)} 条指令")
     t0 = time.time()
-    send_rpcsy(client, sync_cmds, 10000, 0.5)
+    send_rpcsy(client, sync_cmds, timeout_ms=10000, sleep_s=0.5)
     print(f"[同步发送] 完成，耗时 {time.time() - t0:.3f} 秒")
 
 
@@ -55,7 +55,7 @@ def demo_async(client):
     """异步发送：快速下发不阻塞等待"""
     print(f"\n[异步发送] 开始，共 {len(async_cmds)} 条指令")
     t0 = time.time()
-    send_rpc_async(client, async_cmds, 10000, 0.5)
+    send_rpc_async(client, async_cmds, timeout_ms=10000, wait_s=0.5)
     print(f"[异步发送] 完成，耗时 {time.time() - t0:.3f} 秒")
 
 
@@ -68,7 +68,7 @@ def main():
         return
 
     # 初始化
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
     print("初始化完成")
 
     while True:
@@ -93,12 +93,12 @@ def main():
             print("\n对比完成")
 
         elif user_input == "clear":
-            send_rpcsy(client, ["{Var --clear}"], 5000, 0.5)
+            send_rpcsy(client, ["{Var --clear}"], timeout_ms=5000, sleep_s=0.5)
             print("所有变量已清除")
 
         elif user_input == "exit":
             print("退出程序...")
-            send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
+            send_rpcsy(client, ["{Stop --last_count=10}"], timeout_ms=5000, sleep_s=1.0)
             break
 
         else:

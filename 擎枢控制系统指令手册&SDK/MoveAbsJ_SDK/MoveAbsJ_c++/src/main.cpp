@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <cstdio>
 #include <iostream>
 #include <vector>
@@ -55,21 +55,25 @@ int main() {
     // ---- 连接机器人控制器 -------------------------------------------
 
     std::cout << "Connecting: " << std::endl;
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
+    if (!client.IsConnected()) {
+        std::cerr << "Connection failed! Aborting all commands." << std::endl;
+        return -1;
+    }
     std::cout << "Connected: " << std::endl;
 
     // ==================================================================
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
     // ==================================================================
-    // 可选参数: robot::send_rpcsy(*client, cmds, 超时ms, 间隔ms)
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     // ==================================================================
-    // 可选参数: robot::send_rpc_async(*client, cmds, 超时ms, 等待ms)
-    // robot::send_rpc_async(*client, motion_speedL_cmds, 10000, 500);
+    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
+    // send_rpcAsy(client, motion_speedL_cmds, 500, 10000);
 
     // // ==================================================================
     // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
@@ -92,7 +96,7 @@ int main() {
     //         buf,
     //         "{MoveBlend --type=start}"
     //     };
-    //     robot::send_rpcsy(*client, blend_cmds, 5000, 500);
+    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
     // }
 
     return 0;

@@ -1,4 +1,7 @@
-#include "robot.hpp"
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include "rpc_client.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -36,6 +39,9 @@ vector<string> split(const string& s, char delimiter) {
 }
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     const std::string robot_ip = "192.168.2.199";
 
     string input;
@@ -61,10 +67,10 @@ int main() {
     };
 
     // 连接
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 初始化
-    robot::send_rpcsy(*client, init_cmds, 5000, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
 
     // 主循环
     while (true) {
@@ -80,11 +86,11 @@ int main() {
 
         if (input == "start") {
             std::cout << "启动 JogAnyJ 控制...\n";
-            robot::send_rpcsy(*client, jog_start_cmds, 5000, 1000);
+            send_rpcsy<RespDemo>(client, jog_start_cmds, 1000, 5000);
             std::cout << "机器人已执行初始动作\n";
         }
         else if (input == "stop") {
-            robot::send_rpcsy(*client, jog_stop_cmds, 5000, 1000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
             std::cout << "运动已停止\n";
         }
         else if (input == "custom") {
@@ -127,7 +133,7 @@ int main() {
                 std::cout << "执行指令: " << custom_cmd << std::endl;
 
                 std::vector<std::string> custom_cmds = { custom_cmd };
-                robot::send_rpcsy(*client, custom_cmds, 5000, 1000);
+                send_rpcsy<RespDemo>(client, custom_cmds, 1000, 5000);
             }
             catch (const std::exception& e) {
                 std::cout << "输入格式错误，请确保输入的是数字\n";
@@ -136,7 +142,7 @@ int main() {
         }
         else if (input == "exit") {
             std::cout << "退出程序...\n";
-            robot::send_rpcsy(*client, jog_stop_cmds, 5000, 1000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
             break;
         }
         else {

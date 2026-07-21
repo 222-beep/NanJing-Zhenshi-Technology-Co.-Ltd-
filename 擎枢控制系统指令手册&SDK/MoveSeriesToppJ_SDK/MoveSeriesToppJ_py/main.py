@@ -69,7 +69,7 @@ def main():
         return
 
     # 发送初始化指令
-    send_rpcsy(client, init_cmds, 500, 0.1)
+    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
 
     # 轨迹点列表：每项为 {"name": ..., "angles": [...]}（angles 为弧度）
     trajectory_list = []
@@ -102,7 +102,7 @@ def main():
                 send_rpcsy(
                     client,
                     ["{MoveSeriesToppJ --type=first_insert}"],
-                    5000, 0.5,
+                    timeout_ms=5000, sleep_s=0.5,
                 )
                 trajectory_list = []
                 print("[成功] 轨迹起点已设置！")
@@ -116,7 +116,7 @@ def main():
                     "{MoveSeriesToppJ --type=insert "
                     f"--jointtarget_value={joint_str}}}"
                 )
-                send_rpcsy(client, [cmd], 5000, 0.5)
+                send_rpcsy(client, [cmd], timeout_ms=5000, sleep_s=0.5)
 
                 point_name = f"j{len(trajectory_list) + 1}"
                 trajectory_list.append({"name": point_name, "angles": angles_rad})
@@ -142,7 +142,7 @@ def main():
                     "{MoveSeriesToppJ --type=start "
                     f"--vel_coef={speed:.5f} --acc_coef={accel:.5f}}}"
                 )
-                send_rpcsy(client, [cmd], 30000, 1.0)
+                send_rpcsy(client, [cmd], timeout_ms=30000, sleep_s=1.0)
                 print("[成功] 轨迹执行完成！")
 
             elif user_input == "6":
@@ -150,7 +150,7 @@ def main():
                 send_rpcsy(
                     client,
                     ["{MoveSeriesToppJ --type=clear}"],
-                    5000, 0.5,
+                    timeout_ms=5000, sleep_s=0.5,
                 )
                 trajectory_list = []
                 print("[成功] 已清空所有轨迹点！")
@@ -166,9 +166,9 @@ def main():
             elif user_input == "8":
                 print("[操作] 安全停止机器人...")
                 # 停止机器人运动
-                send_rpcsy(client, ["{Stop --last_count=10}"], 5000, 1.0)
+                send_rpcsy(client, ["{Stop --last_count=10}"], timeout_ms=5000, sleep_s=1.0)
                 # 恢复伺服使能
-                send_rpcsy(client, ["{Start}"], 5000, 1.0)
+                send_rpcsy(client, ["{Start}"], timeout_ms=5000, sleep_s=1.0)
                 print("[成功] 程序安全退出！")
                 break
 

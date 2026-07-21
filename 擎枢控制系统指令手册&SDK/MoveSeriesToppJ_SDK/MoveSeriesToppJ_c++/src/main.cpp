@@ -1,6 +1,6 @@
-﻿// 注意：robot.hpp 必须先于 <windows.h> 包含，避免 Windows 头文件中的宏
-// （如 min/max、close/open 等）污染 robot 库的内部实现。
-#include "robot.hpp"
+﻿// 注意：rpc_client.h 必须先于 <windows.h> 包含，避免 Windows 头文件中的宏
+// （如 min/max、close/open 等）污染 RPC 库的内部实现。
+#include "rpc_client.h"
 
 #include <iostream>
 #include <vector>
@@ -216,6 +216,7 @@ double clamp(double value, double min_val, double max_val) {
 
 int main() {
 #ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
     // Windows初始化Winsock
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -248,11 +249,11 @@ int main() {
         }
     }
 
-    // 创建机器人客户端（SDK 返回 shared_ptr<cpp_rpc::CPPClient>）
-    std::shared_ptr<cpp_rpc::CPPClient> robot_client;
+    // 创建机器人客户端
+    cpp_rpc::CPPClient robot_client(robot_ip, 5868);
     disable_stdout();
     try {
-        robot_client = robot::create_client(robot_ip);
+        robot_client = robot_client;  // no-op, client already constructed
     }
     catch (...) {
         enable_stdout();
@@ -274,7 +275,7 @@ int main() {
         bool cmd_success = true;
         disable_stdout();
         try {
-            robot::send_rpcsy(*robot_client, { cmd }, 500, 100);
+            send_rpcsy<RespDemo>(robot_client, { cmd }, 100, 500);
         }
         catch (...) {
             cmd_success = false;
@@ -333,8 +334,8 @@ int main() {
             if (user_input == "1") {
                 cout << "[操作] 设置轨迹起点..." << endl;
                 disable_stdout();
-                robot::send_rpcsy(*robot_client,
-                    { "{MoveSeriesToppJ --type=first_insert}" }, 5000, 500);
+                send_rpcsy<RespDemo>(robot_client,
+                    { "{MoveSeriesToppJ --type=first_insert}" }, 500, 5000);
                 enable_stdout();
                 trajectory_list.clear();
                 cout << "[成功] 轨迹起点已设置！" << endl;
@@ -350,7 +351,7 @@ int main() {
                 // 发送添加轨迹点指令
                 disable_stdout();
                 string cmd = "{MoveSeriesToppJ --type=insert --jointtarget_value=" + joint_str + "}";
-                robot::send_rpcsy(*robot_client, { cmd }, 5000, 500);
+                send_rpcsy<RespDemo>(robot_client, { cmd }, 500, 5000);
                 enable_stdout();
 
                 // 记录轨迹点
@@ -396,8 +397,8 @@ int main() {
                     << " --acc_coef=" << fixed << setprecision(5) << accel << "}";
 
                 disable_stdout();
-                robot::send_rpcsy(*robot_client,
-                    { cmd_ss.str() }, 30000, 1000);
+                send_rpcsy<RespDemo>(robot_client,
+                    { cmd_ss.str() }, 1000, 30000);
                 enable_stdout();
 
                 cout << "[成功] 轨迹执行完成！" << endl;
@@ -405,8 +406,8 @@ int main() {
             else if (user_input == "6") {
                 cout << "[操作] 清空轨迹点..." << endl;
                 disable_stdout();
-                robot::send_rpcsy(*robot_client,
-                    { "{MoveSeriesToppJ --type=clear}" }, 5000, 500);
+                send_rpcsy<RespDemo>(robot_client,
+                    { "{MoveSeriesToppJ --type=clear}" }, 500, 5000);
                 enable_stdout();
 
                 trajectory_list.clear();
@@ -429,11 +430,11 @@ int main() {
                 cout << "[操作] 安全停止机器人..." << endl;
                 disable_stdout();
                 // 停止机器人运动
-                robot::send_rpcsy(*robot_client,
-                    { "{Stop --last_count=10}" }, 5000, 1000);
+                send_rpcsy<RespDemo>(robot_client,
+                    { "{Stop --last_count=10}" }, 1000, 5000);
                 // 恢复伺服使能
-                robot::send_rpcsy(*robot_client,
-                    { "{Start}" }, 5000, 1000);
+                send_rpcsy<RespDemo>(robot_client,
+                    { "{Start}" }, 1000, 5000);
                 enable_stdout();
 
                 cout << "[成功] 程序安全退出！" << endl;

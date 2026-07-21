@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -19,11 +19,14 @@ vector<string> init_cmds = {
 };
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     const std::string robot_ip = "192.168.2.217";
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 发送初始化指令
-    // robot::send_rpcsy(*client, init_cmds, 500, 1000);
+    // send_rpcsy<RespDemo>(client, init_cmds, 1000, 500);
 
     // 第一条SubLoop指令
     vector<string> first_subloop_cmds = {
@@ -31,7 +34,7 @@ int main() {
     };
 
     // 第一条指令必须是异步，且timeout必须设置得足够大，否则后续指令会被丢弃
-    // robot::send_rpc_async(*client, first_subloop_cmds, INT32_MAX, 1000);
+    // send_rpcAsy(client, first_subloop_cmds, 1000, INT32_MAX);
 
     vector<string> your_old_cmds = {
         "{MoveAbsJ||MoveAbsJ}",
@@ -46,7 +49,7 @@ int main() {
     };
 
     // 普通异步RPC调用示例
-    // robot::send_rpc_async(*client, your_old_cmds, 50000, 1000);
+    // send_rpcAsy(client, your_old_cmds, 1000, 50000);
 
     // 主循环发送运动指令
     while (true) {
@@ -56,8 +59,8 @@ int main() {
         getline(cin, input_cmd);
         your_cmds.clear();
         your_cmds.push_back(input_cmd);
-        // robot::send_rpcsy(*client, your_cmds, 50000, 5000);
-        robot::send_rpc_async(*client, your_cmds, 1000000, 3000);
+        // send_rpcsy<RespDemo>(client, your_cmds, 5000, 50000);
+        send_rpcAsy(client, your_cmds, 3000, 1000000);
     }
 
     return 0;

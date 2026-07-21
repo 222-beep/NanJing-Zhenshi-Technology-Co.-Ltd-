@@ -1,4 +1,4 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <iostream>
 #include <vector>
 #include <string>
@@ -29,10 +29,10 @@ int main() {
         //添加你自己的指令
     };
 
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     //init
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
 
     std::cout << "Start dragging in CST? (start/stop): ";
     std::cin >> input; 
@@ -41,12 +41,12 @@ int main() {
     while (1) {
         if (input == "start") {
             std::cout << "Start DragInCST!!!" << std::endl;
-            robot::send_rpcsy(*client, Dra_sta, 5000, 1000);
+            send_rpcsy<RespDemo>(client, Dra_sta, 1000, 5000);
             std::cout << "Stop dragging in CST? (stop)" << std::endl;
             std::cin >> input;
         }
         else if (input == "stop") {
-            robot::send_rpcsy(*client, Dra_stp, 5000, 1000);
+            send_rpcsy<RespDemo>(client, Dra_stp, 1000, 5000);
             std::cout << "Dragging stopped!!" << std::endl;
             std::cout << std::endl;
             std::cout << "Start dragging in CST? (start/stop):" << std::endl;

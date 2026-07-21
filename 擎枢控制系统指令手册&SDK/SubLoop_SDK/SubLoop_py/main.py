@@ -25,7 +25,7 @@ def main():
         return
 
     # 发送初始化指令
-    # send_rpcsy(client, init_cmds, 500, 1)
+    # send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=1)
 
     # 第一条SubLoop指令
     first_subloop_cmds = [
@@ -33,7 +33,7 @@ def main():
     ]
 
     # 第一条指令必须是异步，且timeout必须设置得足够大，否则后续指令会被丢弃
-    # send_rpc_async(client, first_subloop_cmds, sys.maxsize, 1)
+    # send_rpc_async(client, first_subloop_cmds, timeout_ms=sys.maxsize, wait_s=1)
 
     your_old_cmds = [
         "{MoveAbsJ||MoveAbsJ}",
@@ -48,7 +48,7 @@ def main():
     ]
 
     # 普通异步RPC调用示例
-    # send_rpc_async(client, your_old_cmds, 50000, 1)
+    # send_rpc_async(client, your_old_cmds, timeout_ms=50000, wait_s=1)
 
     # 主循环发送运动指令
     while True:
@@ -57,8 +57,8 @@ def main():
         input_cmd = input().strip()
         your_cmds.clear()
         your_cmds.append(input_cmd)
-        # send_rpcsy(client, your_cmds, 50000, 5)
-        send_rpc_async(client, your_cmds, 1000000, 3)
+        # send_rpcsy(client, your_cmds, timeout_ms=50000, sleep_s=5)
+        send_rpc_async(client, your_cmds, timeout_ms=1000000, wait_s=3)
 
     return 0
 

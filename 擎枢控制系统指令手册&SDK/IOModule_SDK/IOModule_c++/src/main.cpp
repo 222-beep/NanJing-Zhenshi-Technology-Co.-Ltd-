@@ -1,9 +1,12 @@
-﻿#include "robot.hpp"
+﻿#include "rpc_client.h"
 #include <iostream>
 #include <string>
 #include <vector>
 
 int main() {
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
     const std::string robot_ip = "192.168.1.11";
 
     // 初始化指令
@@ -30,10 +33,10 @@ int main() {
         "{DOPulse --do_name=DO1 --pulse_active=1 --high_cycles=10 --low_cycles=10}",
     };
 
-    auto client = robot::create_client(robot_ip);
+    cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 发送初始化指令
-    robot::send_rpcsy(*client, init_cmds, 500, 100);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
     std::cout << "初始化完成" << std::endl;
 
     while (true) {
@@ -50,13 +53,13 @@ int main() {
         }
 
         if (user_input == "getdi") {
-            robot::send_rpcsy(*client, getdi_cmds, 5000, 500);
+            send_rpcsy<RespDemo>(client, getdi_cmds, 500, 5000);
             std::cout << "[GetDI] 指令已发送" << std::endl;
         } else if (user_input == "setdo") {
-            robot::send_rpcsy(*client, setdo_cmds, 5000, 500);
+            send_rpcsy<RespDemo>(client, setdo_cmds, 500, 5000);
             std::cout << "[SetDO] 指令已发送" << std::endl;
         } else if (user_input == "dopulse") {
-            robot::send_rpcsy(*client, dopulse_cmds, 5000, 500);
+            send_rpcsy<RespDemo>(client, dopulse_cmds, 500, 5000);
             std::cout << "[DOPulse] 指令已发送" << std::endl;
         } else if (user_input == "exit") {
             std::cout << "退出程序..." << std::endl;
