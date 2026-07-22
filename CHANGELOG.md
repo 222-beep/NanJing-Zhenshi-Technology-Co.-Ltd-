@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-07-22
+
+### 更新擎枢控制系统最小上位机例程（基础 SDK 拆分与更新）
+
+- **更新** 资源包为 Gitee 最新版本（`sdk_send_recevice_demo_c`、`sdk_send_recevice_demo_py`、`ros1_sdk`）：
+  - **新增** `Base_SDK_c++.zip` — 基础 SDK（C++）：底层 RPC 客户端（`robot_command`）+ 状态订阅（`robot_state`，ZMQ + Protobuf）
+  - **新增** `Base_SDK_py.zip` — 基础 SDK（Python）：RPC 客户端（`robot_command`）+ 状态订阅（`robot_state`）+ 运行时封装（`robot_runtime.py`）及示例 `main.py`
+  - **更新** `Ros.zip` — ROS1 集成包更新至最新（示例统一置于 `ros/` 目录下）
+- **删除** `Base_SDk.zip`（原 C++ & Python 合并基础 SDK，已由 `Base_SDK_c++.zip` 与 `Base_SDK_py.zip` 拆分替代）
+- **更新** 根目录 `README.md`，同步最小上位机例程资源包列表
+
+---
+
 ## 2026-07-21
 
 ### 更新擎枢控制系统指令手册&SDK（RPC 公共库重构）
