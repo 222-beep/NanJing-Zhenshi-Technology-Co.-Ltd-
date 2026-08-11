@@ -17,7 +17,7 @@ init_cmds = [
 ]
 
 def main():
-    robot_ip = "192.168.2.241"
+    robot_ip = "192.168.11.11"
     client = RpcClient(robot_ip)
 
     if not client.is_connected():

@@ -10,7 +10,7 @@ init_cmds = [
     "{Enable}",
 ]
 
-ROBOT_IP = "192.168.2.199"
+ROBOT_IP = "192.168.11.11"
 
 # 常量定义
 REQUIRED_DIM = 10        # 关节指令字符串需要的总维度

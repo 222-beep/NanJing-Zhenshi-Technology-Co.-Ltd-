@@ -7,7 +7,7 @@ int main() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    const std::string robot_ip = "192.168.1.11";
+    const std::string robot_ip = "192.168.11.11";
 
     // 初始化指令
     std::vector<std::string> init_cmds = {

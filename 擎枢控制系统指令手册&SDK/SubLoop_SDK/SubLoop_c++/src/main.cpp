@@ -22,7 +22,7 @@ int main() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    const std::string robot_ip = "192.168.2.217";
+    const std::string robot_ip = "192.168.11.11";
     cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 发送初始化指令

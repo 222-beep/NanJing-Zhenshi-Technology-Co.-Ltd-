@@ -64,7 +64,7 @@ int main() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
-    const std::string robot_ip = "192.168.2.199";
+    const std::string robot_ip = "192.168.11.11";
 
     string input;
 

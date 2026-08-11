@@ -26,7 +26,7 @@ dopulse_cmds = [
     "{DOPulse --do_name=DO0 --pulse_active=1 --high_cycles=10 --low_cycles=10}",
 ]
 
-ROBOT_IP = "192.168.2.217"
+ROBOT_IP = "192.168.11.11"
 
 
 def main():

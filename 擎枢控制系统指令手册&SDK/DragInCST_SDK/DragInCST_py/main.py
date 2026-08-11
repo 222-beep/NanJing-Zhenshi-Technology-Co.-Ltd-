@@ -23,7 +23,7 @@ Dra_stp = [
     "{Start}"
 ]
 
-ROBOT_IP = "192.168.2.199"
+ROBOT_IP = "192.168.11.11"
 
 def main():
     client = RpcClient(ROBOT_IP)

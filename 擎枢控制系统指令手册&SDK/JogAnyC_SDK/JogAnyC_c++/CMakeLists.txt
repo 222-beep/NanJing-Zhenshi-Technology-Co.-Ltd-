@@ -50,19 +50,19 @@ if(MSVC)
 	endif()
 endif(MSVC)
 
-add_executable(Hello_JogC src/main.cpp)
+add_executable(Hello_JogAnyC src/main.cpp)
 
 if(WIN32)
-target_link_libraries(Hello_JogC cpp_rpc)
+target_link_libraries(Hello_JogAnyC cpp_rpc)
 
 # 编译后自动把 dll 复制到 exe 旁边（否则运行时会报"找不到 dll"）
-add_custom_command(TARGET Hello_JogC POST_BUILD
+add_custom_command(TARGET Hello_JogAnyC POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${SDK_LIB_DIR}/cpp_rpc.dll"
-        "$<TARGET_FILE_DIR:Hello_JogC>"
+        "$<TARGET_FILE_DIR:Hello_JogAnyC>"
 )
 
 elseif(UNIX)
-target_link_libraries(Hello_JogC cpp_rpc pthread)
+target_link_libraries(Hello_JogAnyC cpp_rpc pthread)
 
 endif()

@@ -20,7 +20,7 @@ Jog_stop = [
     "{Stop --last_count=10}",
 ]
 
-ROBOT_IP = "192.168.2.199"
+ROBOT_IP = "192.168.11.11"
 
 def main():
     """主函数"""

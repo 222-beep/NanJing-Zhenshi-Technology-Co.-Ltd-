@@ -11,7 +11,7 @@
 
 namespace {
 
-const std::string robot_ip = "192.168.2.199";
+const std::string robot_ip = "192.168.11.11";
 
 // 可选模式：
 // "free_drag"      ：6 个方向都可拖动，零力拖动

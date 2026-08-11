@@ -9,7 +9,7 @@
 ```
 .
 ├── 工智AI工艺包使用文档/               # 工智AI工艺包使用说明
-├── 擎枢控制系统指令手册&SDK/           # 指令手册与 14 个 SDK 示例（C++ / Python）
+├── 擎枢控制系统指令手册&SDK/           # 指令手册与 15 个 SDK 示例（C++ / Python）
 ├── 擎枢控制系统最小上位机例程/         # 基础 SDK 包、ROS SDK 包与使用手册
 └── Web使用手册v1.7.3.pdf              # Web 端使用手册
 ```
@@ -24,14 +24,14 @@
 
 ### 2. 擎枢控制系统指令手册&SDK
 
-包含**控制器指令手册**以及 **14 个 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本：
+包含**控制器指令手册**以及 **15 个 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本：
 
 | 分类 | SDK | 功能 |
 |------|-----|------|
 | 关节运动 | MoveAbsJ、MoveAbsJ_Double | 单臂/双臂关节绝对位置运动 |
 | 笛卡尔运动 | MoveBlend、MoveS | 笛卡尔空间混合轨迹 / S 曲线轨迹 |
 | 轨迹运动 | MoveSeriesToppJ | 关节连续 Topp 轨迹 |
-| 点动控制 | JogC、JogAnyJ、JogAnyJ_Double | 笛卡尔/关节空间点动 |
+| 点动控制 | JogC、JogAnyJ、JogAnyJ_Double、JogAnyC | 笛卡尔/关节空间点动与任意位姿控制 |
 | 力控 | DragInCST、ForcePositionHybridControl | 拖动示教 / 力位混合控制 |
 | IO 控制 | IOModule | DI / DO / 脉冲输出 |
 | 通信模式 | SyncAsync、SubLoop | 同步异步对比 / 子循环控制 |

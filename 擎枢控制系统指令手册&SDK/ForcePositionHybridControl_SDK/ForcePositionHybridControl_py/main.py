@@ -3,7 +3,7 @@ import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
-ROBOT_IP = "192.168.2.199"
+ROBOT_IP = "192.168.11.11"
 
 # 可选模式：
 # "free_drag"      ：6 个方向都可拖动，零力拖动

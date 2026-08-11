@@ -4,7 +4,7 @@
 #include <string>
 
 int main() {
-    const std::string robot_ip = "192.168.2.199";
+    const std::string robot_ip = "192.168.11.11";
     std::string input;
 
     std::vector<std::string> init_cmds = {

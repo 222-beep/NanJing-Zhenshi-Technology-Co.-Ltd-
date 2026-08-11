@@ -1,6 +1,6 @@
 # 机器人控制 SDK 示例集
 
-本仓库包含 **14 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、数据订阅等功能。
+本仓库包含 **15 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、数据订阅等功能。
 
 ---
 
@@ -16,27 +16,29 @@
 │   │   │   ├── include/                      #   头文件
 │   │   │   │   ├── cpp_rpc.hpp               #     RPC 底层客户端
 │   │   │   │   ├── msg.hpp                   #     消息类型
-│   │   │   │   ├── resp_dto.h                #     响应数据类型定义
 │   │   │   │   ├── util.hpp                  #     工具函数
 │   │   │   │   ├── wepoll.h                  #     Windows epoll 模拟
 │   │   │   │   ├── message/                  #     消息层封装
-│   │   │   │   │   └── rpc_client.h          #       RPC 同步/异步发送（主入口）
+│   │   │   │   │   ├── rpc_client.h          #       RPC 同步/异步发送（主入口）
+│   │   │   │   │   └── resp_dto.h            #       响应数据类型定义
 │   │   │   │   └── util/reflection/          #     JSON 反射
 │   │   │   │       ├── json.hpp              #         nlohmann/json
 │   │   │   │       └── easy_json.h           #         简易 JSON 工具
 │   │   │   └── lib/                          #   预编译库
 │   │   │       ├── win/Release/              #     Windows: cpp_rpc.dll/.lib
 │   │   │       └── linux/                    #     Linux
-│   │   │           ├── x86/2004/Release/     #       x86 (Ubuntu 20.04): libcpp_rpc.so
-│   │   │           └── arm/2204/Release/     #       ARM (Ubuntu 22.04): libcpp_rpc.so
+│   │   │           ├── x86/                  #       x86 架构: libcpp_rpc.so
+│   │   │           └── arm/                  #       ARM 架构: libcpp_rpc.so
 │   │   └── python/                           # Python RPC 库
 │   │       ├── rpc_client.py                 #   RPC 客户端封装（RpcClient, send_rpcsy, send_rpc_async）
 │   │       ├── __init__.py
 │   │       └── lib/                          #   平台动态库
 │   │           ├── win/                      #     Windows: rpc.pyd
-│   │           └── linux/                    #     Linux
-│   │               ├── x86/2004/             #       x86 (Ubuntu 20.04): rpc.so
-│   │               └── arm/2204/             #       ARM (Ubuntu 22.04): rpc.so
+│   │           └── linux/                    #     Linux（按 CPython ABI 分目录）
+│   │               ├── x86/                  #       x86 架构
+│   │               │   └── cp310/            #         CPython 3.10: rpc.so
+│   │               └── arm/                  #       ARM 架构
+│   │                   └── cp310/            #         CPython 3.10: rpc.so
 │   │
 │   └── topic/                                # Topic 公共库（Topic SDK 的通信基础）
 │       ├── c++/                              # C++ 专属
@@ -66,19 +68,20 @@
 ├── JogC_SDK/                               # SD-06  笛卡尔空间点动
 ├── JogAnyJ_SDK/                            # SD-07  单臂任意关节位置控制
 ├── JogAnyJ_Double_SDK/                     # SD-08  双臂任意关节位置控制
-├── DragInCST_SDK/                          # SD-09  CST 空间拖动
-├── ForcePositionHybridControl_SDK/         # SD-10  力位混合控制
-├── IOModule_SDK/                           # SD-11  IO 模块控制（DI/DO/脉冲）
-├── SyncAsync_SDK/                          # SD-12  同步 vs 异步发送对比
-├── SubLoop_SDK/                            # SD-13  子循环控制（双模型并行）
-└── Topic_SDK/                              # SD-14  实时数据订阅（独立通信库）
+├── JogAnyC_SDK/                            # SD-09  笛卡尔空间任意位姿控制
+├── DragInCST_SDK/                          # SD-10  CST 空间拖动
+├── ForcePositionHybridControl_SDK/         # SD-11  力位混合控制
+├── IOModule_SDK/                           # SD-12  IO 模块控制（DI/DO/脉冲）
+├── SyncAsync_SDK/                          # SD-13  同步 vs 异步发送对比
+├── SubLoop_SDK/                            # SD-14  子循环控制（双模型并行）
+└── Topic_SDK/                              # SD-15  实时数据订阅（独立通信库）
 ```
 
 ---
 
 ## SDK 分类总览
 
-### A 类：标准 RPC SDK（13 个）
+### A 类：标准 RPC SDK（14 个）
 
 依赖 `common/rpc/` 公共库，通过 RPC 协议（端口 **5868**）与机器人控制器通信。
 
@@ -92,11 +95,12 @@
 | SD-06 | JogC | 笛卡尔空间方向点动 | 循环运动 |
 | SD-07 | JogAnyJ | 单臂任意关节位置控制 | 交互菜单 |
 | SD-08 | JogAnyJ_Double | 双臂任意关节位置控制 | 交互菜单 |
-| SD-09 | DragInCST | CST 空间拖动 | 交互启停 |
-| SD-10 | ForcePositionHybridControl | 力位混合控制（零力/恒力/混合） | 持续型控制 |
-| SD-11 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 交互菜单 |
-| SD-12 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 交互菜单 |
-| SD-13 | SubLoop | 子循环控制（双模型并行执行） | 交互输入 |
+| SD-09 | JogAnyC | 笛卡尔空间任意位姿控制 | 交互菜单 |
+| SD-10 | DragInCST | CST 空间拖动 | 交互启停 |
+| SD-11 | ForcePositionHybridControl | 力位混合控制（零力/恒力/混合） | 持续型控制 |
+| SD-12 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 交互菜单 |
+| SD-13 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 交互菜单 |
+| SD-14 | SubLoop | 子循环控制（双模型并行执行） | 交互输入 |
 
 ### B 类：独立通信 SDK（1 个）
 
@@ -104,7 +108,7 @@
 
 | 编号 | SDK | 功能 |
 |------|-----|------|
-| SD-14 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
+| SD-15 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
 
 ---
 
@@ -121,7 +125,7 @@
 │ ② Topic_SDK    独立编译（与 ① 无依赖关系）          │
 │    依赖：common/topic/ 公共库                        │
 ├──────────────────────────────────────────────────┤
-│ ③ 其余 13 个标准 RPC SDK                           │
+│ ③ 其余 14 个标准 RPC SDK                           │
 │    均依赖 ① common/rpc/，彼此独立无先后顺序          │
 │    可任意顺序编译                                    │
 └──────────────────────────────────────────────────┘
@@ -159,7 +163,7 @@
 
 ### 依赖库
 
-**A 类 — 标准 RPC SDK（13 个）：**
+**A 类 — 标准 RPC SDK（14 个）：**
 
 | 库 | 用途 |
 |----|------|
@@ -190,7 +194,7 @@
 
 ### 标准 RPC SDK 编译
 
-以 MoveAbsJ 为例，其余 12 个标准 SDK 编译方式完全一致。
+以 MoveAbsJ 为例，其余 13 个标准 SDK 编译方式完全一致。
 
 **Windows：**
 
@@ -206,7 +210,7 @@ cmake --build . --config Release
 ```bash
 cd MoveAbsJ_SDK/MoveAbsJ_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release  # 自动检测 Ubuntu 版本；如需手动指定可加 -DLIB_UBUNTU_VERSION=2004 或 2204
+cmake .. -DCMAKE_BUILD_TYPE=Release  # 自动检测架构（x86/arm）并链接对应预编译库
 make
 ```
 
@@ -262,10 +266,9 @@ set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 ```
 
-编译时自动根据平台和 Ubuntu 版本选择对应库文件：
+编译时自动根据平台、架构和 Ubuntu 版本选择对应库文件：
 - **Windows**: `common/rpc/c++/lib/win/Release/`
-- **Linux x86**: `common/rpc/c++/lib/linux/x86/20.04/Release/`
-- **Linux ARM**: `common/rpc/c++/lib/linux/arm/22.04/Release/`
+- **Linux**: `common/rpc/c++/lib/linux/<arch>/<版本>/Release/`，其中 `<arch>` 为 `x86` / `arm`，`<版本>` 为 `2004`（Ubuntu 20.04）/ `2204`（Ubuntu 22.04）
 
 Linux 平台可通过 CMake 参数指定 Ubuntu 版本（默认 `20.04`）：
 ```bash

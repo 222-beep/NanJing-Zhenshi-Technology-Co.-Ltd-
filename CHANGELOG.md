@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-08-11
+
+### 更新擎枢控制系统指令手册&SDK（新增 JogAnyC，RPC 库结构精简）
+
+- **新增** `JogAnyC_SDK`（SD-09 笛卡尔空间任意位姿控制，C++ / Python 双语言），SDK 示例模块由 14 个增至 **15 个**
+- **更新** `common/rpc/` 公共库结构：
+  - `resp_dto.h` 移至 `c++/include/message/`（与 `rpc_client.h` 同层）
+  - Linux 平台库精简：移除 `2004/2204` 版本化目录，C++ 库直挂 `lib/linux/{arm,x86}/libcpp_rpc.so`，Python 库为 `linux/{arm,x86}/cp310/rpc.so`
+  - `rpc_client.py` 更新
+- **新增** `JogAnyJ_SDK` 正弦点动示例（`main-sine.cpp` / `main-sine.py`）
+- **更新** `擎枢控制系统指令手册&SDK/README.md`、`Topic_SDK/README.md` 与 `指令手册-合-v1.7.5.pdf`
+- **更新** 根目录 `README.md`，同步模块数量（15 个）与分类
+
+---
+
 ## 2026-07-22
 
 ### 更新擎枢控制系统最小上位机例程（基础 SDK 拆分与更新）

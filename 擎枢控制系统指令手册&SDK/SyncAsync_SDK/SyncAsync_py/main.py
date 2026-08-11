@@ -40,7 +40,7 @@ async_cmds = [
     "{Start}",
 ]
 
-ROBOT_IP = "192.168.2.145"
+ROBOT_IP = "192.168.11.11"
 
 
 def demo_sync(client):

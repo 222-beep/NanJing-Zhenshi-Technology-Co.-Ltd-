@@ -9,7 +9,7 @@ init_cmds = [
     "{Enable}",
 ]
 
-ROBOT_IP = "192.168.2.217"
+ROBOT_IP = "192.168.11.11"
 
 def main():
     """主函数 - MoveS 轨迹控制"""
