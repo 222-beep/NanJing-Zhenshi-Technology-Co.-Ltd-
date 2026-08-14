@@ -26,7 +26,7 @@ struct TwoFingerGripperStatus {
 #pragma pack()
 
 int main() {
-    std::string remote_ip = "192.168.11.11";
+    std::string remote_ip = "192.168.2.216";
     start_subscriber(remote_ip);
 
     while (true) {
@@ -139,6 +139,37 @@ int main() {
                     std::cout << "      max_acc               : " << getJointMaxAcc(m, j) << std::endl;
                     std::cout << "      min_acc               : " << getJointMinAcc(m, j) << std::endl;
                     std::cout << "      max_collision_torque  : " << getJointMaxCollisionTorque(m, j) << std::endl;
+                }
+
+                std::cout << "  Matrix variables (" << getMatrixVariableCount(m) << "):" << std::endl;
+                for (size_t i = 0; i < getMatrixVariableCount(m); ++i) {
+                    std::cout << "    matrix_variable[" << i << "] : " << getMatrixVariableName(m, i) << " data=";
+                    print_vector(getMatrixVariableData(m, i));
+                    std::cout << std::endl;
+                }
+
+                std::cout << "  drag_in_cst_coef     : ";
+                print_vector(getDragInCstCoef(m));
+                std::cout << std::endl;
+
+                std::cout << "  InfRngs (" << getInfRngCount(m) << "):" << std::endl;
+                for (size_t i = 0; i < getInfRngCount(m); ++i) {
+                    const auto r = getInfRng(m, i);
+                    std::cout << "    inf_rng[" << i << "]: name=" << r.infrng_name
+                              << " action=" << r.infrng_action
+                              << " enable=" << r.infrng_isenable
+                              << " priority=" << r.infrng_priority
+                              << " zone_type=" << r.infrng_zonetype
+                              << " di=" << r.infrng_diname
+                              << " do=" << r.infrng_doname
+                              << " shape=" << r.infrng_shape << std::endl;
+                    std::cout << "      center="; print_vector(r.infrng_center);
+                    std::cout << " size="; print_vector(r.infrng_size);
+                    std::cout << " euler="; print_vector(r.infrng_euler);
+                    std::cout << " margin=" << r.infrng_margin
+                              << " is_twopoint=" << (r.infrng_is_twopoint ? "true" : "false") << std::endl;
+                    std::cout << "      point1="; print_vector(r.infrng_point1);
+                    std::cout << " point2="; print_vector(r.infrng_point2); std::cout << std::endl;
                 }
             }
 

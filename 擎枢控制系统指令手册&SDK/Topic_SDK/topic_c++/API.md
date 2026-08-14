@@ -11,6 +11,15 @@ SystemStateReader 是 `SharedSystemState` 之上的只读访问层，提供两�
 
 两种方式共享同一套字段和命名体系，自由函数底层也是基于快照实现。
 
+## 默认上报频率
+
+| 数据类型 | 底层默认上报频率 |
+|----------|--------------------|
+| RT（实时数据） | 250 Hz |
+| NRT（非实时数据） | 2 Hz |
+
+以上是底层 Topic 的默认上报频率。实际接收频率还会受到发布端配置、网络和客户端负载影响；调用 API 的频率不会改变底层上报频率。
+
 ---
 
 ## 快速开始
@@ -136,6 +145,61 @@ nrt.isModelUsingSP(m);          // bool
 nrt.isModelCollisionDetection(m); // bool
 nrt.modelTakePhoto(m);          // int
 ```
+
+### 3.3 MatrixVariable（NRT）
+
+```cpp
+nrt.matrixVariableCount(m);                  // size_t
+nrt.matrixVariableName(m, i);                // const std::string&
+nrt.matrixVariableData(m, i);                // const std::vector<double>&
+nrt.hasMatrixVariable(m, "HL_kine_R1");     // bool
+nrt.matrixVariableData(m, "HL_tool0_pe");  // 按名称读取整个数组
+nrt.matrixVariableValue(m, "HL_kine_R1");   // 按名称读取第 0 个值
+```
+
+名称不存在时，`matrixVariableData` 和 `matrixVariableValue` 抛出 `std::out_of_range`。
+
+直接访问函数：
+
+| 函数 | 返回值 | 说明 |
+|------|--------|------|
+| `getMatrixVariableCount(m)` | `size_t` | 模型的变量数量 |
+| `getMatrixVariableName(m, i)` | `std::string` | 第 i 个变量名称 |
+| `getMatrixVariableData(m, i)` | `std::vector<double>` | 第 i 个变量的数组数据 |
+
+### 3.4 拖动系数与干涉区（NRT）
+
+```cpp
+nrt.dragInCstCoef(m);       // const std::vector<double>&
+nrt.infRngCount(m);         // size_t
+nrt.infRng(m, i);           // const InfRngInfo&
+```
+
+直接访问函数：
+
+| 函数 | 返回值 | 说明 |
+|------|--------|------|
+| `getDragInCstCoef(m)` | `std::vector<double>` | 电流环拖动系数 |
+| `getInfRngCount(m)` | `size_t` | 干涉区/安全区数量 |
+| `getInfRng(m, i)` | `InfRngInfo` | 第 i 个区域的完整配置；无 NRT 数据时抛出 `std::runtime_error` |
+
+`InfRngInfo` 包含以下字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `infrng_name` | `std::string` | 区域名称 |
+| `infrng_action` | `std::string` | 触发动作（stop/pause） |
+| `infrng_isenable` | `int` | 是否启用 |
+| `infrng_priority` | `int` | 优先级 |
+| `infrng_zonetype` | `std::string` | interfere/safety |
+| `infrng_diname` / `infrng_doname` | `std::string` | 关联 DI/DO 名称 |
+| `infrng_shape` | `std::string` | box/sphere/cylinder |
+| `infrng_center` | `std::vector<double>` | 中心坐标 |
+| `infrng_size` | `std::vector<double>` | 尺寸参数 |
+| `infrng_euler` | `std::vector<double>` | 欧拉角 |
+| `infrng_margin` | `double` | 安全边距 |
+| `infrng_is_twopoint` | `bool` | 是否使用双点定义 |
+| `infrng_point1` / `infrng_point2` | `std::vector<double>` | 双点坐标 |
 
 ---
 
@@ -396,6 +460,7 @@ nrt.teachPointJointtarget(m, point_idx);      // const std::vector<double>&
 | 六维力 (ftvalues) | RT | |
 | 关节限制 (max/min position/vel/acc) | NRT | 低频、配置 |
 | 工具/工件/负载/示教点 | NRT | |
+| MatrixVariable / 拖动系数 / 干涉区 | NRT | 模型变量和安全配置 |
 | 从站/子系统/接口 | NRT | |
 | 系统初始化状态 | NRT | |
 

@@ -13,7 +13,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `topic.pyd` | pybind11 编译的 Python 扩展模块 |
+| `cp310/topic.pyd` | pybind11 编译的CPython 3.10扩展模块 |
 | `libprotobuf.dll` | Protocol Buffers 3.x 动态库 |
 | `libzmq-v142-mt-4_3_6.dll` | ZeroMQ 4.3.6 动态库 |
 
@@ -35,7 +35,7 @@ python -c "from platform_loader import get_topic_module; t = get_topic_module();
 ## 库文件依赖关系
 
 ```
-topic.pyd
+cp310/topic.pyd
   ├── libprotobuf.dll
   └── libzmq-v142-mt-4_3_6.dll
 ```

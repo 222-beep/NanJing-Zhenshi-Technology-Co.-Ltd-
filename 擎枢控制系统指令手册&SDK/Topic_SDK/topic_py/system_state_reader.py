@@ -491,6 +491,38 @@ class SystemStateReader:
     def io_total_count(self) -> int:
         return len(self._data.models_io)
 
+    # MatrixVariable / drag coefficients / interference ranges (NRT)
+    def matrix_variable_count(self, model_idx: int) -> int:
+        return self._data.models[model_idx].matrix_variables_count
+
+    def matrix_variable_name(self, model_idx: int, variable_idx: int) -> str:
+        model = self._data.models[model_idx]
+        return self._data.models_matrix_variables[
+            model.matrix_variables_start_idx + variable_idx
+        ].matrixvar_name
+
+    def matrix_variable_data(self, model_idx: int, variable_idx: int) -> list:
+        model = self._data.models[model_idx]
+        return self._data.models_matrix_variables[
+            model.matrix_variables_start_idx + variable_idx
+        ].data
+
+    def matrix_variable_data_by_name(self, model_idx: int, name: str) -> list:
+        for variable_idx in range(self.matrix_variable_count(model_idx)):
+            if self.matrix_variable_name(model_idx, variable_idx) == name:
+                return self.matrix_variable_data(model_idx, variable_idx)
+        raise KeyError(f"MatrixVariable not found: {name}")
+
+    def drag_in_cst_coef(self, model_idx: int) -> list:
+        return self._data.models[model_idx].drag_in_cst_coef
+
+    def inf_rng_count(self, model_idx: int) -> int:
+        return self._data.models[model_idx].inf_rngs_count
+
+    def inf_rng(self, model_idx: int, range_idx: int):
+        model = self._data.models[model_idx]
+        return self._data.models_inf_rngs[model.inf_rngs_start_idx + range_idx]
+
     # ========================================================================
     # 示教点 (NRT, 按模型索引)
     # ========================================================================
@@ -835,6 +867,38 @@ def is_model_collision_detection(model_idx: int) -> bool:
 def get_model_take_photo(model_idx: int) -> int:
     s = SystemStateReader.snapshot_nrt()
     return s.model_take_photo(model_idx) if s else 0
+
+
+def get_matrix_variable_count(model_idx: int) -> int:
+    s = SystemStateReader.snapshot_nrt()
+    return s.matrix_variable_count(model_idx) if s else 0
+
+
+def get_matrix_variable_name(model_idx: int, variable_idx: int) -> str:
+    s = SystemStateReader.snapshot_nrt()
+    return s.matrix_variable_name(model_idx, variable_idx) if s else ""
+
+
+def get_matrix_variable_data(model_idx: int, variable_idx: int) -> list:
+    s = SystemStateReader.snapshot_nrt()
+    return s.matrix_variable_data(model_idx, variable_idx) if s else []
+
+
+def get_drag_in_cst_coef(model_idx: int) -> list:
+    s = SystemStateReader.snapshot_nrt()
+    return s.drag_in_cst_coef(model_idx) if s else []
+
+
+def get_inf_rng_count(model_idx: int) -> int:
+    s = SystemStateReader.snapshot_nrt()
+    return s.inf_rng_count(model_idx) if s else 0
+
+
+def get_inf_rng(model_idx: int, range_idx: int):
+    s = SystemStateReader.snapshot_nrt()
+    if not s:
+        raise RuntimeError("No NRT data available")
+    return s.inf_rng(model_idx, range_idx)
 
 
 # ---- 当前点 (RT) ----

@@ -245,6 +245,52 @@ public:
     }
 
     // ========================================================================
+    // MatrixVariable —— NRT（按模型索引，支持按索引或名称访问）
+    // ========================================================================
+    size_t matrixVariableCount(size_t model_idx) const {
+        return data_->models.at(model_idx).matrix_variables_count;
+    }
+    const MatrixVariableInfo& matrixVariable(size_t model_idx, size_t variable_idx) const {
+        const auto& model = data_->models.at(model_idx);
+        return data_->models_matrix_variables.at(model.matrix_variables_start_idx + variable_idx);
+    }
+    const std::string& matrixVariableName(size_t model_idx, size_t variable_idx) const {
+        return matrixVariable(model_idx, variable_idx).matrixvar_name;
+    }
+    const std::vector<double>& matrixVariableData(size_t model_idx, size_t variable_idx) const {
+        return matrixVariable(model_idx, variable_idx).data;
+    }
+    bool hasMatrixVariable(size_t model_idx, const std::string& name) const {
+        for (size_t i = 0; i < matrixVariableCount(model_idx); ++i) {
+            if (matrixVariableName(model_idx, i) == name) return true;
+        }
+        return false;
+    }
+    const std::vector<double>& matrixVariableData(size_t model_idx, const std::string& name) const {
+        for (size_t i = 0; i < matrixVariableCount(model_idx); ++i) {
+            if (matrixVariableName(model_idx, i) == name) {
+                return matrixVariableData(model_idx, i);
+            }
+        }
+        throw std::out_of_range("MatrixVariable not found: " + name);
+    }
+    double matrixVariableValue(size_t model_idx, const std::string& name, size_t data_idx = 0) const {
+        return matrixVariableData(model_idx, name).at(data_idx);
+    }
+
+    const std::vector<double>& dragInCstCoef(size_t model_idx) const {
+        return data_->models.at(model_idx).drag_in_cst_coef;
+    }
+
+    size_t infRngCount(size_t model_idx) const {
+        return data_->models.at(model_idx).inf_rngs_count;
+    }
+    const InfRngInfo& infRng(size_t model_idx, size_t range_idx) const {
+        const auto& model = data_->models.at(model_idx);
+        return data_->models_inf_rngs.at(model.inf_rngs_start_idx + range_idx);
+    }
+
+    // ========================================================================
     // IO (IODataInfo) —— NRT（按模型索引）
     // ========================================================================
     size_t ioCount(size_t model_idx) const {
@@ -475,6 +521,28 @@ inline bool isModelCollisionDetection(size_t model_idx) {
 }
 inline int getModelTakePhoto(size_t model_idx) {
     auto s = SystemStateReader::snapshotNrt(); return s.valid() ? s.modelTakePhoto(model_idx) : 0;
+}
+inline size_t getMatrixVariableCount(size_t model_idx) {
+    auto s = SystemStateReader::snapshotNrt(); return s.valid() ? s.matrixVariableCount(model_idx) : 0;
+}
+inline std::string getMatrixVariableName(size_t model_idx, size_t variable_idx) {
+    auto s = SystemStateReader::snapshotNrt(); return s.valid() ? s.matrixVariableName(model_idx, variable_idx) : "";
+}
+inline std::vector<double> getMatrixVariableData(size_t model_idx, size_t variable_idx) {
+    auto s = SystemStateReader::snapshotNrt();
+    return s.valid() ? s.matrixVariableData(model_idx, variable_idx) : std::vector<double>();
+}
+inline std::vector<double> getDragInCstCoef(size_t model_idx) {
+    auto s = SystemStateReader::snapshotNrt();
+    return s.valid() ? s.dragInCstCoef(model_idx) : std::vector<double>();
+}
+inline size_t getInfRngCount(size_t model_idx) {
+    auto s = SystemStateReader::snapshotNrt(); return s.valid() ? s.infRngCount(model_idx) : 0;
+}
+inline InfRngInfo getInfRng(size_t model_idx, size_t range_idx) {
+    auto s = SystemStateReader::snapshotNrt();
+    if (!s.valid()) throw std::runtime_error("No NRT data available");
+    return s.infRng(model_idx, range_idx);
 }
 
 // ---- 当前点 (RT) ----

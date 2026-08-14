@@ -31,7 +31,6 @@
 │   │   │           └── arm/                  #       ARM 架构: libcpp_rpc.so
 │   │   └── python/                           # Python RPC 库
 │   │       ├── rpc_client.py                 #   RPC 客户端封装（RpcClient, send_rpcsy, send_rpc_async）
-│   │       ├── __init__.py
 │   │       └── lib/                          #   平台动态库
 │   │           ├── win/                      #     Windows: rpc.pyd
 │   │           └── linux/                    #     Linux（按 CPython ABI 分目录）
@@ -44,21 +43,16 @@
 │       ├── c++/                              # C++ 专属
 │       │   ├── include/                      #   头文件（protobuf、zmq、message 等）
 │       │   └── lib/                          #   C++ 专属预编译库 + protoc 工具
-│       │       ├── win/Release/              #     message.dll, libprotobuf.dll, protoc.exe 等
-│       │       └── linux/                    #     libmessage.so + protobuf/zmq
-│       │           ├── x86/20.04/Release/    #       x86 (Ubuntu 20.04)
-│       │           └── arm/22.04/Release/    #       ARM (Ubuntu 22.04)
-│       ├── python/                           # Python 专属
-│       │   └── lib/                          #   topic.so/pyd + protobuf/zmq
-│       │       ├── win/                      #     topic.pyd, libprotobuf.dll
-│       │       └── linux/                    #
-│       │           ├── x86/20.04/            #       x86 (Ubuntu 20.04): topic.so + libs
-│       │           └── arm/22.04/            #       ARM (Ubuntu 22.04): topic.so
-│       └── shared/lib/                       # C++/Python 共享的第三方依赖
-│           ├── win/Release/                  #     libzmq-v142-mt-4_3_6.dll
-│           └── linux/                        #     libprotobuf.so, libprotobuf.so.32, libzmq.so 等
-│               ├── x86/20.04/Release/        #       x86 (Ubuntu 20.04)
-│               └── arm/22.04/Release/        #       ARM (Ubuntu 22.04)
+│       │       ├── win/Release/              #     message.dll, libprotobuf.dll, zmq dll, protoc.exe 等
+│       │       └── linux/                    #     libmessage.so + protobuf/zmq（20.04 ABI 基线，按架构平铺）
+│       │           ├── x86/                  #       x86
+│       │           └── arm/                  #       ARM
+│       └── python/                           # Python 专属
+│           └── lib/                          #   topic.so/pyd + protobuf/zmq 依赖
+│               ├── win/                      #     libprotobuf.dll, zmq dll + cp310/topic.pyd
+│               └── linux/                    #     libprotobuf.so.32, libzmq.so.5 + cp310/topic.so
+│                   ├── x86/                  #       x86（按 CPython ABI 分目录，当前仅 cp310）
+│                   └── arm/                  #       ARM（同上）
 │
 ├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动
 ├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
@@ -234,11 +228,11 @@ cmake --build . --config Release
 ```bash
 cd Topic_SDK/topic_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=20.04  # 或 22.04，根据实际系统版本选择
+cmake .. -DCMAKE_BUILD_TYPE=Release   # 自动检测架构（x86/arm）
 make
 ```
 
-编译完成后会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录。
+编译完成后会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录；若环境无 `protoc`，自动降级使用 `proto_generated/` 预生成的 pb 文件。
 
 ---
 
@@ -251,7 +245,7 @@ Python SDK 无需编译，所有模块开箱即用。
 python MoveAbsJ_SDK/MoveAbsJ_py/main.py
 ```
 
-`rpc_client.py` 会自动检测操作系统、架构和 Ubuntu 版本，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下优先检测当前 Ubuntu 版本（20.04 / 22.04），检测失败时按 20.04 → 22.04 顺序 fallback。
+`rpc_client.py` 会自动检测操作系统、架构与 CPython ABI，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下按当前 CPython 版本选择 ABI 目录（如 Python 3.10 → `linux/<arch>/cp310/`），目前仅提供 `cp310`，请使用 CPython 3.10 运行。
 
 ---
 
@@ -266,14 +260,9 @@ set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 ```
 
-编译时自动根据平台、架构和 Ubuntu 版本选择对应库文件：
+编译时自动根据平台与架构选择对应库文件：
 - **Windows**: `common/rpc/c++/lib/win/Release/`
-- **Linux**: `common/rpc/c++/lib/linux/<arch>/<版本>/Release/`，其中 `<arch>` 为 `x86` / `arm`，`<版本>` 为 `2004`（Ubuntu 20.04）/ `2204`（Ubuntu 22.04）
-
-Linux 平台可通过 CMake 参数指定 Ubuntu 版本（默认 `20.04`）：
-```bash
-cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=22.04
-```
+- **Linux**: `common/rpc/c++/lib/linux/<arch>/`，其中 `<arch>` 为 `x86` / `arm`（库目录按架构平铺，无版本子目录）
 
 ### Topic SDK
 
@@ -284,15 +273,13 @@ set(TOPIC_COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/topic")
 include_directories("${TOPIC_COMMON_DIR}/c++/include")
 ```
 
-库文件按三层目录组织：
-- **shared/lib/**：C++/Python 共用的第三方依赖（protobuf、zmq）
-- **c++/lib/**：C++ 专属库（message）及编译链接用的 protobuf/zmq
-- **python/lib/**：Python 专属扩展（topic.so/pyd）及运行时加载的 protobuf/zmq
+库文件按两层目录组织：
+- **c++/lib/**：C++ 专属库（message）及编译链接用的 protobuf/zmq，含 protoc 工具
+- **python/lib/**：Python 专属扩展（cp310/topic.so/pyd）及运行时依赖的 protobuf/zmq
 
-编译时自动根据平台和 Ubuntu 版本选择对应库文件：
-- **Windows**: `common/topic/{shared,c++}/lib/win/Release/`
-- **Linux x86**: `common/topic/{shared,c++}/lib/linux/x86/20.04/Release/`
-- **Linux ARM**: `common/topic/{shared,c++}/lib/linux/arm/22.04/Release/`
+编译时自动根据平台与架构选择对应库文件（Linux 统一使用 Ubuntu 20.04 ABI 基线）：
+- **Windows**: `common/topic/c++/lib/win/Release/`
+- **Linux**: `common/topic/c++/lib/linux/<arch>/`，其中 `<arch>` 为 `x86` / `arm`
 
 ### Python SDK
 
@@ -304,7 +291,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'common',
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 ```
 
-Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、架构和 Ubuntu 版本，从 `common/topic/python/lib/` 和 `common/topic/shared/lib/` 加载匹配的动态库。
+Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、架构与 CPython ABI，从 `common/topic/python/lib/` 加载匹配的动态库（如 `linux/<arch>/cp310/topic.so`，仅支持 CPython 3.10）。
 
 ---
 

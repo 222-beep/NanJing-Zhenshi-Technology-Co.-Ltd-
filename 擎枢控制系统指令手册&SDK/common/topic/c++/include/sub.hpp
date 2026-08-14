@@ -53,6 +53,11 @@ struct ModelsInfo {
     size_t teach_points_count = 0;     // 示教点数量
     size_t io_start_idx = 0;         // 在 models_io 中的起始索引
     size_t io_count = 0;             // IO 数量
+    size_t matrix_variables_start_idx = 0; // 在 models_matrix_variables 中的起始索引
+    size_t matrix_variables_count = 0;     // MatrixVariable 数量
+    std::vector<double> drag_in_cst_coef;  // 电流环拖动系数
+    size_t inf_rngs_start_idx = 0;         // 在 models_inf_rngs 中的起始索引
+    size_t inf_rngs_count = 0;             // 干涉区数量
 };
 
 //模型运行状态信息
@@ -121,6 +126,29 @@ struct IODataInfo {
     double io_data;				// IO数据
 };
 
+struct MatrixVariableInfo {
+    std::string matrixvar_name;		// MatrixVariable 名称
+    std::vector<double> data;		// MatrixVariable 数据
+};
+
+struct InfRngInfo {
+    std::string infrng_name;
+    std::string infrng_action;
+    int infrng_isenable;
+    int infrng_priority;
+    std::string infrng_zonetype;
+    std::string infrng_diname;
+    std::string infrng_doname;
+    std::string infrng_shape;
+    std::vector<double> infrng_center;
+    std::vector<double> infrng_size;
+    std::vector<double> infrng_euler;
+    double infrng_margin;
+    bool infrng_is_twopoint;
+    std::vector<double> infrng_point1;
+    std::vector<double> infrng_point2;
+};
+
 //示教点信息
 struct PointInfo {
     std::string point_name;
@@ -163,6 +191,8 @@ struct SystemStateData {
     std::vector<WobjInfo> models_wobjs;
     std::vector<LoadInfo> models_loads;
     std::vector<IODataInfo> models_io;
+    std::vector<MatrixVariableInfo> models_matrix_variables;
+    std::vector<InfRngInfo> models_inf_rngs;
     std::vector<PointInfo> models_teach_points;
     std::vector<CurrentPointInfo> models_current_points;
     std::vector<ModelInfo> models_info;
@@ -269,6 +299,8 @@ void display_nrt(const overall_system_nrtstate::SystemNrtState& tt, SystemStateD
     parm.models_wobjs.clear();
     parm.models_loads.clear();
     parm.models_io.clear();
+    parm.models_matrix_variables.clear();
+    parm.models_inf_rngs.clear();
     parm.models_teach_points.clear();
     parm.subsystems.clear();
     parm.interfaces.clear();
@@ -304,6 +336,8 @@ void display_nrt(const overall_system_nrtstate::SystemNrtState& tt, SystemStateD
         size_t wobjs_start = parm.models_wobjs.size();
         size_t loads_start = parm.models_loads.size();
         size_t teach_points_start = parm.models_teach_points.size();
+        size_t matrix_variables_start = parm.models_matrix_variables.size();
+        size_t inf_rngs_start = parm.models_inf_rngs.size();
 
         // 创建 ModelsInfo 并填写基本信息
         ModelsInfo model_info;
@@ -366,6 +400,39 @@ void display_nrt(const overall_system_nrtstate::SystemNrtState& tt, SystemStateD
             parm.models_io.push_back(std::move(io_info));
         }
 
+        // MatrixVariable
+        for (int j = 0; j < model.matrix_variables_size(); ++j) {
+            const auto& variable = model.matrix_variables(j);
+            MatrixVariableInfo variable_info;
+            variable_info.matrixvar_name = variable.matrixvar_name();
+            variable_info.data.assign(variable.data().begin(), variable.data().end());
+            parm.models_matrix_variables.push_back(std::move(variable_info));
+        }
+
+        model_info.drag_in_cst_coef.assign(model.drag_in_cst_coef().begin(), model.drag_in_cst_coef().end());
+
+        // 干涉区/安全区配置
+        for (int j = 0; j < model.inf_rngs_size(); ++j) {
+            const auto& range = model.inf_rngs(j);
+            InfRngInfo info;
+            info.infrng_name = range.infrng_name();
+            info.infrng_action = range.infrng_action();
+            info.infrng_isenable = range.infrng_isenable();
+            info.infrng_priority = range.infrng_priority();
+            info.infrng_zonetype = range.infrng_zonetype();
+            info.infrng_diname = range.infrng_diname();
+            info.infrng_doname = range.infrng_doname();
+            info.infrng_shape = range.infrng_shape();
+            info.infrng_center.assign(range.infrng_center().begin(), range.infrng_center().end());
+            info.infrng_size.assign(range.infrng_size().begin(), range.infrng_size().end());
+            info.infrng_euler.assign(range.infrng_euler().begin(), range.infrng_euler().end());
+            info.infrng_margin = range.infrng_margin();
+            info.infrng_is_twopoint = range.infrng_is_twopoint();
+            info.infrng_point1.assign(range.infrng_point1().begin(), range.infrng_point1().end());
+            info.infrng_point2.assign(range.infrng_point2().begin(), range.infrng_point2().end());
+            parm.models_inf_rngs.push_back(std::move(info));
+        }
+
         // 示教点
         for (int j = 0; j < model.teach_points_size(); ++j) {
             auto& point = model.teach_points(j);
@@ -393,6 +460,10 @@ void display_nrt(const overall_system_nrtstate::SystemNrtState& tt, SystemStateD
         model_info.teach_points_count = model.teach_points_size();
         model_info.io_start_idx = io_start;
         model_info.io_count = model.io_size();
+        model_info.matrix_variables_start_idx = matrix_variables_start;
+        model_info.matrix_variables_count = model.matrix_variables_size();
+        model_info.inf_rngs_start_idx = inf_rngs_start;
+        model_info.inf_rngs_count = model.inf_rngs_size();
 
         // 将模型信息加入列表
         parm.models.push_back(std::move(model_info));

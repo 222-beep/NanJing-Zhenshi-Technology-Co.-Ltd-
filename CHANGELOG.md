@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-08-14
+
+### 更新擎枢控制系统指令手册&SDK（Topic 库结构精简 + 状态读取层）
+
+- **更新** `common/topic/` 公共库结构：
+  - Linux 库按架构平铺：`c++/lib/linux/{arm,x86}/` 与 `python/lib/linux/{arm,x86}/`，移除 `20.04/22.04` 版本化目录及 `common/topic/shared/`
+  - Python 扩展按 CPython ABI 分目录：`lib/linux/{arm,x86}/cp310/topic.so`、`lib/win/cp310/topic.pyd`
+  - Windows 补充 `libzmq-v142-mt-4_3_6.dll`
+- **新增** 系统状态只读访问层：C++ `system_state_reader.hpp` 与 Python `system_state_reader.py`（Direct / Snapshot 双模式）
+- **新增** `Topic_SDK/topic_py/platform_loader.py` 平台检测与动态库自动加载
+- **更新** protobuf 消息：`overall_system_nrtstate.proto` 增加 `matrix_variables`、`drag_in_cst_coef`、`inf_rngs` 字段，并同步重新生成 pb 文件；新增 `proto_generated/` 预生成兜底与 `message_struct/` 解析结构体示例
+- **更新** `Topic_SDK/README.md`、`topic_c++/API.md`、`topic_py/API.md` 及根目录 `README.md`
+- **删除** `common/rpc/python/__init__.py` 与仓库中的 `__pycache__` 缓存文件
+
+---
+
 ## 2026-08-11
 
 ### 更新擎枢控制系统指令手册&SDK（新增 JogAnyC，RPC 库结构精简）

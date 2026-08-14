@@ -16,11 +16,12 @@ Topic_SDK/
 ├── README.md                       # 本文件
 │
 ├── topic_c++/                      # C++ 版本
-│   ├── CMakeLists.txt              #   构建配置（含 protoc 自动生成）
+│   ├── CMakeLists.txt              #   构建配置（含 protoc 自动生成，缺失时降级用预生成 pb）
 │   ├── API.md                      #   SystemStateReader 完整 API 文档
 │   ├── proto/                      #   Protobuf 消息定义
 │   │   ├── overall_system_rtstate.proto    # 实时状态（RT）
 │   │   └── overall_system_nrtstate.proto   # 非实时状态（NRT）
+│   ├── proto_generated/            #   预生成的 pb 文件（无 protoc 时的兜底）
 │   ├── message_struct/             #   子系统 data 字段解析用结构体示例
 │   │   └── message_struct.h
 │   └── src/                        #   示例源码
@@ -30,24 +31,24 @@ Topic_SDK/
 │
 └── topic_py/                       # Python 版本
     ├── main.py                     #   精简示例（与 C++ main.cpp 对应）
+    ├── API.md                      #   Python 接口 API 文档
     ├── platform_loader.py          #   平台检测 + 动态库自动加载
     ├── system_state_reader.py      #   数据读取封装（Direct/Snapshot 双模式）
-    ├── readme.txt                  #   Linux 常见 ImportError 处理说明
+    ├── readme.txt                  #   Linux 运行库说明
     └── examples/                   #   完整示例
         ├── topic_sub_direct.py     #     全字段示例 — Direct 模式
         └── topic_sub_snapshot.py   #     全字段示例 — Snapshot 模式
 ```
 
-公共库位于仓库根目录的 `common/topic/`，按三层组织：
+公共库位于仓库根目录的 `common/topic/`，按两层组织：
 
 ```
 common/topic/
-├── shared/lib/     # C++/Python 共用的第三方依赖（libprotobuf、libzmq）
-├── c++/            # C++ 专属：include 头文件 + 预编译库（message、protobuf、protoc 工具）
-└── python/         # Python 专属：topic.so/pyd 扩展 + 运行时加载的 protobuf/zmq
+├── c++/            # C++ 专属：include 头文件 + 预编译库（message、protobuf、zmq、protoc 工具）
+└── python/         # Python 专属：cp310/topic.so/pyd 扩展 + 运行时依赖的 protobuf/zmq
 ```
 
-> 库文件按平台和 Ubuntu 版本分目录存放（Windows、Linux x86、Linux ARM）。**禁止在 Topic_SDK 内独立复制 include/ 和 lib/ 目录**，所有引用均通过相对路径指向 `common/topic/`。
+> 库文件按平台与架构分目录存放（Windows、Linux x86、Linux ARM），Linux 统一使用 Ubuntu 20.04 ABI 基线，Python 按 CPython ABI 分目录（当前仅 cp310）。**禁止在 Topic_SDK 内独立复制 include/ 和 lib/ 目录**，所有引用均通过相对路径指向 `common/topic/`。
 
 ---
 
@@ -124,7 +125,7 @@ if has_rt_data():
 
 ## C++ 编译
 
-CMake 构建时会用 `protoc` 从 `proto/` 自动生成 `.pb.cc/.pb.h`（输出到 build 目录的 `generated_proto/`），无需手动执行。
+CMake 构建时会用 `protoc` 从 `proto/` 自动生成 `.pb.cc/.pb.h`（输出到 build 目录的 `generated_proto/`），无需手动执行；若环境中找不到 `protoc`，自动降级使用 `proto_generated/` 下的预生成文件。
 
 **Windows：**
 
@@ -140,7 +141,7 @@ cmake --build . --config Release
 ```bash
 cd Topic_SDK/topic_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=20.04   # 或 22.04，按实际系统选择
+cmake .. -DCMAKE_BUILD_TYPE=Release   # 自动检测架构（x86/arm）
 make
 ```
 
@@ -148,7 +149,7 @@ make
 
 - 默认编译目标为 `src/main.cpp`（精简示例）。如需编译全字段示例，修改 `CMakeLists.txt` 中的 `SET(test src/main.cpp)` 为 `src/topic_sub_direct.cpp` 或 `src/topic_sub_snapshot.cpp` 后重新构建
 - Windows 平台编译后会自动将 `libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll` 复制到 exe 目录
-- Linux 平台链接 `libprotobuf.so`、`libzmq.so`、`libmessage.so`（来自 `common/topic/` 对应架构/版本目录）
+- Linux 平台链接 `libprotobuf.so`、`libzmq.so`、`libmessage.so`（来自 `common/topic/c++/lib/linux/<arch>/`）
 
 ---
 
@@ -162,7 +163,7 @@ python Topic_SDK/topic_py/examples/topic_sub_direct.py     # 全字段 Direct �
 python Topic_SDK/topic_py/examples/topic_sub_snapshot.py   # 全字段 Snapshot 示例
 ```
 
-`platform_loader.py` 会自动检测操作系统、架构和 Ubuntu 版本，从 `common/topic/python/lib/` 和 `common/topic/shared/lib/` 加载匹配当前平台的 `topic.pyd` / `topic.so` 及依赖库。
+`platform_loader.py` 会自动检测操作系统、架构与 CPython ABI，从 `common/topic/python/lib/` 加载匹配当前平台的 `topic.pyd` / `topic.so` 及依赖库（Linux 模块位于 `linux/<arch>/cp310/`，依赖库在其上级目录，仅支持 CPython 3.10）。
 
 ### Linux 常见 ImportError
 
@@ -172,10 +173,10 @@ python Topic_SDK/topic_py/examples/topic_sub_snapshot.py   # 全字段 Snapshot 
 ImportError: topic.so: undefined symbol: _ZN6google8protobuf...
 ```
 
-说明运行时未优先加载匹配的 `libprotobuf.so.32`。当前版本已由 `platform_loader.py` 自动配置库路径，通常直接运行即可；如仍需手动指定：
+说明运行时未优先加载匹配的 `libprotobuf.so.32`。当前版本的 `topic.so` 已内置 RUNPATH（指向依赖库所在上级目录），通常直接运行即可；如仍需手动指定：
 
 ```bash
-LD_PRELOAD=../../common/topic/python/lib/linux/x86/20.04/libprotobuf.so.32 python3 main.py
+LD_PRELOAD=../../common/topic/python/lib/linux/x86/libprotobuf.so.32 python3 main.py
 ```
 
 > 注意：`libprotobuf.so`（链接用）与 `libprotobuf.so.32`（运行时加载）是两个独立文件，不可互相替换。详见 `topic_py/readme.txt`。
@@ -195,8 +196,8 @@ LD_PRELOAD=../../common/topic/python/lib/linux/x86/20.04/libprotobuf.so.32 pytho
 
 | 操作系统 | 架构 |
 |----------|------|
-| Windows | x86 / x64 |
-| Linux | x86 / x64（Ubuntu 20.04）、ARM / ARM64（Ubuntu 22.04） |
+| Windows | x64 |
+| Linux | x86 / x64、ARM / ARM64（统一使用 Ubuntu 20.04 ABI 基线库） |
 
 ---
 
@@ -205,5 +206,6 @@ LD_PRELOAD=../../common/topic/python/lib/linux/x86/20.04/libprotobuf.so.32 pytho
 | 文档 | 路径 |
 |------|------|
 | SystemStateReader 完整 API | `topic_c++/API.md` |
-| Python 运行故障说明 | `topic_py/readme.txt` |
+| Python 接口 API | `topic_py/API.md` |
+| Linux 运行库说明 | `topic_py/readme.txt` |
 | Protobuf 消息定义 | `topic_c++/proto/*.proto` |

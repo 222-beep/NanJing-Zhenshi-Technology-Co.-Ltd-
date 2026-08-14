@@ -38,7 +38,7 @@ struct TwoFingerGripperStatus {
 #pragma pack(pop)
 
 int main() {
-    std::string remote_ip = "192.168.11.11";
+    std::string remote_ip = "192.168.2.216";
     start_subscriber(remote_ip);
 
     while (true) {
@@ -207,6 +207,39 @@ int main() {
                 for (size_t i = 0; i < nrt.ioCount(m); ++i) {
                     std::cout << "    io[" << i << "] : " << nrt.ioName(m, i)
                               << " data=" << nrt.ioData(m, i) << std::endl;
+                }
+
+                // MatrixVariable
+                std::cout << "  Matrix variables (" << nrt.matrixVariableCount(m) << "):" << std::endl;
+                for (size_t i = 0; i < nrt.matrixVariableCount(m); ++i) {
+                    std::cout << "    matrix_variable[" << i << "] : " << nrt.matrixVariableName(m, i) << " data=";
+                    print_vector(nrt.matrixVariableData(m, i));
+                    std::cout << std::endl;
+                }
+
+                std::cout << "  drag_in_cst_coef     : ";
+                print_vector(nrt.dragInCstCoef(m));
+                std::cout << std::endl;
+
+                // 干涉区/安全区配置
+                std::cout << "  InfRngs (" << nrt.infRngCount(m) << "):" << std::endl;
+                for (size_t i = 0; i < nrt.infRngCount(m); ++i) {
+                    const auto& r = nrt.infRng(m, i);
+                    std::cout << "    inf_rng[" << i << "]: name=" << r.infrng_name
+                              << " action=" << r.infrng_action
+                              << " enable=" << r.infrng_isenable
+                              << " priority=" << r.infrng_priority
+                              << " zone_type=" << r.infrng_zonetype
+                              << " di=" << r.infrng_diname
+                              << " do=" << r.infrng_doname
+                              << " shape=" << r.infrng_shape << std::endl;
+                    std::cout << "      center="; print_vector(r.infrng_center);
+                    std::cout << " size="; print_vector(r.infrng_size);
+                    std::cout << " euler="; print_vector(r.infrng_euler);
+                    std::cout << " margin=" << r.infrng_margin
+                              << " is_twopoint=" << (r.infrng_is_twopoint ? "true" : "false") << std::endl;
+                    std::cout << "      point1="; print_vector(r.infrng_point1);
+                    std::cout << " point2="; print_vector(r.infrng_point2); std::cout << std::endl;
                 }
             }
 

@@ -173,6 +173,26 @@ def print_nrt(data: 'topic.SystemStateData'):
             print(f"      robottarget={pt.robottarget}")
             print(f"      jointtarget={pt.jointtarget}")
 
+        print(f"  Matrix variables ({model.matrix_variables_count}):")
+        mv_start = model.matrix_variables_start_idx
+        for i in range(model.matrix_variables_count):
+            variable = data.models_matrix_variables[mv_start + i]
+            print(f"    matrix_variable[{i}] : {variable.matrixvar_name} data={variable.data}")
+
+        print(f"  drag_in_cst_coef     : {model.drag_in_cst_coef}")
+        print(f"  InfRngs ({model.inf_rngs_count}):")
+        ir_start = model.inf_rngs_start_idx
+        for i in range(model.inf_rngs_count):
+            r = data.models_inf_rngs[ir_start + i]
+            print(f"    inf_rng[{i}]: name={r.infrng_name} action={r.infrng_action} "
+                  f"enable={r.infrng_isenable} priority={r.infrng_priority} "
+                  f"zone_type={r.infrng_zonetype} di={r.infrng_diname} "
+                  f"do={r.infrng_doname} shape={r.infrng_shape}")
+            print(f"      center={r.infrng_center} size={r.infrng_size} "
+                  f"euler={r.infrng_euler} margin={r.infrng_margin} "
+                  f"is_twopoint={r.infrng_is_twopoint}")
+            print(f"      point1={r.infrng_point1} point2={r.infrng_point2}")
+
     # IO 数据（按模型索引，使用 io_start_idx 和 io_count）
     for model_idx, model in enumerate(data.models):
         # 新版模块支持 io_start_idx/io_count

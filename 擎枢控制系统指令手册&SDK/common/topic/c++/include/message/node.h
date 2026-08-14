@@ -92,9 +92,14 @@ namespace message_bus {
         }
 
         int GetMapSize() {
-            printf("hehe %p, %d\n", &(detail::CallbackRegistry::Instance().callback_map_), detail::CallbackRegistry::Instance().callback_map_.size());
-            printf("vector: %p, %lu\n", &(detail::CallbackRegistry::Instance().test_1), detail::CallbackRegistry::Instance().test_1.size());
-            return detail::CallbackRegistry::Instance().callback_map_.size();
+            auto& registry = detail::CallbackRegistry::Instance();
+            printf("callback map: %p, %zu\n",
+                static_cast<void*>(&registry.callback_map_),
+                registry.callback_map_.size());
+            printf("vector: %p, %zu\n",
+                static_cast<void*>(&registry.test_1),
+                registry.test_1.size());
+            return static_cast<int>(registry.callback_map_.size());
         }
     /*
     * 设置连接断开事件回调

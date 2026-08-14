@@ -24,6 +24,8 @@ from system_state_reader import (
     get_joint_max_position, get_joint_min_position, get_joint_max_vel, get_joint_min_vel,
     get_joint_max_acc, get_joint_min_acc, get_joint_max_collision_torque,
     is_model_using_sp, is_model_collision_detection, get_model_take_photo,
+    get_matrix_variable_count, get_matrix_variable_name, get_matrix_variable_data,
+    get_drag_in_cst_coef, get_inf_rng_count, get_inf_rng,
     get_current_point_name, get_current_tool_name, get_current_wobj_name,
     get_current_robottarget, get_current_jointtarget,
     get_model_error_code, get_model_error_msg, get_model_state, get_model_time_rate,
@@ -143,6 +145,24 @@ def print_nrt():
             print(f"      max_acc               : {get_joint_max_acc(m, j)}")
             print(f"      min_acc               : {get_joint_min_acc(m, j)}")
             print(f"      max_collision_torque  : {get_joint_max_collision_torque(m, j)}")
+
+        print(f"  Matrix variables ({get_matrix_variable_count(m)}):")
+        for i in range(get_matrix_variable_count(m)):
+            print(f"    matrix_variable[{i}] : {get_matrix_variable_name(m, i)} "
+                  f"data={get_matrix_variable_data(m, i)}")
+
+        print(f"  drag_in_cst_coef     : {get_drag_in_cst_coef(m)}")
+        print(f"  InfRngs ({get_inf_rng_count(m)}):")
+        for i in range(get_inf_rng_count(m)):
+            r = get_inf_rng(m, i)
+            print(f"    inf_rng[{i}]: name={r.infrng_name} action={r.infrng_action} "
+                  f"enable={r.infrng_isenable} priority={r.infrng_priority} "
+                  f"zone_type={r.infrng_zonetype} di={r.infrng_diname} "
+                  f"do={r.infrng_doname} shape={r.infrng_shape}")
+            print(f"      center={r.infrng_center} size={r.infrng_size} "
+                  f"euler={r.infrng_euler} margin={r.infrng_margin} "
+                  f"is_twopoint={r.infrng_is_twopoint}")
+            print(f"      point1={r.infrng_point1} point2={r.infrng_point2}")
 
         # 注：示教点、工具、工件、IO 等 NRT 数据如需逐项获取
         # 可参照 system_state_reader.py 中的模式自行扩展 get_*() 函数
