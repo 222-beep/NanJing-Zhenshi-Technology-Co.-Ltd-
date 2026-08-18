@@ -76,10 +76,10 @@ atomic<bool> running(false);
 //  工具函数
 // ==================================================================
 
-// 生成 {0,0,...,0} 格式字符串（num_joints 个关节 + 3 个填充 0）
+// 生成 {0,0,...,0} 格式字符串，总保持 10 位（num_joints 个关节 + 补 0：6 轴补 4，7 轴补 3）
 string make_zero_joint_pos(int num_joints) {
     string result = "{";
-    int total = num_joints + 3;
+    int total = std::max(num_joints, 10);
     for (int i = 0; i < total; ++i) {
         result += "0";
         if (i < total - 1) result += ",";
@@ -88,16 +88,21 @@ string make_zero_joint_pos(int num_joints) {
     return result;
 }
 
-// 根据弧度数组生成 {val,val,...,0,0,0} 格式的关节位置字符串
+// 根据弧度数组生成 {val,val,...,0,0,...} 格式的关节位置字符串（补 0 凑齐 10 位）
 string make_joint_pos(const double rad[], int n) {
     string result = "{";
     for (int i = 0; i < n; ++i) {
         char buf[32];
         sprintf(buf, "%.6f", rad[i]);
         result += buf;
-        if (i < n) result += ",";
+        result += ",";
     }
-    result += "0,0,0}";
+    // 补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
+    int pad = std::max(0, 10 - n);
+    for (int i = 0; i < pad; ++i) {
+        result += "0";
+        result += (i == pad - 1) ? "}" : ",";
+    }
     return result;
 }
 
@@ -268,7 +273,12 @@ int main() {
                     joint_pos += joints_str[i];
                     joint_pos += ",";
                 }
-                joint_pos += "0,0,0}";
+                // 补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
+                const int pad = 10 - NUM_JOINTS;
+                for (int i = 0; i < pad; ++i) {
+                    joint_pos += "0";
+                    joint_pos += (i == pad - 1) ? "}" : ",";
+                }
 
                 string custom_cmd = make_jog_cmd(joint_pos, START_ACC, START_DEC, START_VEL, START_LAST_COUNT);
                 cout << "执行指令: " << custom_cmd << endl;

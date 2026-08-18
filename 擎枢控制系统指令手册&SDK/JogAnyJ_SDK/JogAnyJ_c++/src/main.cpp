@@ -14,12 +14,13 @@ using namespace std;
 // 机器人关节轴数，按实际机型修改，例如 6、7
 const int NUM_JOINTS = 7;
 
-// 生成 {0,0,0,0,0,0,0} 这种字符串
+// 生成 {0,0,...,0} 格式字符串，总保持 10 位（num_joints 个关节 + 补 0：6 轴补 4，7 轴补 3）
 std::string make_zero_joint_pos(int num_joints) {
     std::string result = "{";
-    for (int i = 0; i < num_joints; ++i) {
+    int total = std::max(num_joints, 10);
+    for (int i = 0; i < total; ++i) {
         result += "0";
-        if (i < num_joints - 1) {
+        if (i < total - 1) {
             result += ",";
         }
     }
@@ -58,7 +59,7 @@ int main() {
 
     // JogAnyJ 初始动作
     std::vector<std::string> jog_start_cmds = {
-        "{JogAnyJ --joint_pos=" + zero_joint_pos + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5}"
+        "{JogAnyJ --jointtarget_value=" + zero_joint_pos + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
     };
 
     // 停止动作
@@ -110,11 +111,14 @@ int main() {
                 std::string joint_pos = "{";
                 for (size_t i = 0; i < joints_str.size(); ++i) {
                     joint_pos += joints_str[i];
-                    if (i < joints_str.size() - 1) {
-                        joint_pos += ",";
-                    }
+                    joint_pos += ",";
                 }
-                joint_pos += "}";
+                // 补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
+                const int pad = 10 - NUM_JOINTS;
+                for (int i = 0; i < pad; ++i) {
+                    joint_pos += "0";
+                    joint_pos += (i == pad - 1) ? "}" : ",";
+                }
 
                 std::cout << "请输入运动速度(默认0.1): ";
                 std::string speed_input;
@@ -126,9 +130,9 @@ int main() {
                 }
 
                 std::string custom_cmd =
-                    "{JogAnyJ --joint_pos=" + joint_pos +
+                    "{JogAnyJ --jointtarget_value=" + joint_pos +
                     " --joint_vel=" + std::to_string(speed) +
-                    " --joint_acc=0.5 --joint_dec=0.5}";
+                    " --joint_acc=0.5 --joint_dec=0.5 --last_count=100}";
 
                 std::cout << "执行指令: " << custom_cmd << std::endl;
 

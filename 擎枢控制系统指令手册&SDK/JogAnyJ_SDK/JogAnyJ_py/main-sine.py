@@ -64,15 +64,16 @@ running = False
 def wall_clock_ms():
     return int(time.time() * 1000)
 
-# 生成 {0,0,...,0} 格式字符串（num_joints 个关节 + 3 个填充 0）
+# 生成 {0,0,...,0} 格式字符串，总保持 10 位（num_joints 个关节 + 补 0：6 轴补 4，7 轴补 3）
 def make_zero_joint_pos(num_joints):
-    total = num_joints + 3
+    total = max(num_joints, 10)
     return "{" + ",".join(["0"] * total) + "}"
 
-# 根据弧度数组生成 {val,val,...,0,0,0} 格式的关节位置字符串
+# 根据弧度数组生成 {val,val,...,0,0,...} 格式的关节位置字符串（补 0 凑齐 10 位）
 def make_joint_pos(rad, n):
     values = [f"{rad[i]:.6f}" for i in range(n)]
-    return "{" + ",".join(values) + ",0,0,0}"
+    values += ["0"] * max(0, 10 - n)
+    return "{" + ",".join(values) + "}"
 
 # 构造 JogAnyJ 指令字符串
 def make_jog_cmd(joint_pos, acc, dec, vel, last_count):
@@ -211,7 +212,8 @@ def main():
                 for i in range(NUM_JOINTS):
                     joint_pos += joints_str[i]
                     joint_pos += ","
-                joint_pos += "0,0,0}"
+                # 补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
+                joint_pos += ",".join(["0"] * (10 - NUM_JOINTS)) + "}"
 
                 custom_cmd = make_jog_cmd(joint_pos, START_ACC, START_DEC, START_VEL, START_LAST_COUNT)
                 print(f"执行指令: {custom_cmd}")

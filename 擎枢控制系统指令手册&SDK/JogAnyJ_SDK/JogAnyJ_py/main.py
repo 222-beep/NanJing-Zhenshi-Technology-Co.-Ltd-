@@ -5,14 +5,17 @@ from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 # 机器人关节轴数，按实际机型修改（例如 6、7），这里默认7轴
 NUM_JOINTS = 7
 
+# jointtarget_value 补零个数：总保持 10 位（6 轴补 4 个 0，7 轴补 3 个 0）
+PAD_ZEROS = 10 - NUM_JOINTS
+
 # 初始化命令列表
 init_cmds = [
     "{Clear}",
 ]
 
-# JogAnyJ 启动指令 - 设置初始位置
+# JogAnyJ 启动指令 - 设置初始位置（jointtarget_value 固定 10 位：NUM_JOINTS 个关节 + 补 0）
 Jog_start = [
-    f"{{JogAnyJ --joint_pos={{{','.join(['0'] * NUM_JOINTS)}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5}}"
+    f"{{JogAnyJ --jointtarget_value={{{','.join(['0'] * (NUM_JOINTS + PAD_ZEROS))}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}}"
 ]
 
 # JogAnyJ 停止指令
@@ -66,8 +69,8 @@ def main():
                 # 获取速度参数
                 speed = float(input("请输入运动速度(默认0.1): ") or "0.1")
                 
-                # 构建自定义指令
-                custom_cmd = f"{{JogAnyJ --joint_pos={{{','.join(map(str, joints))}}} --joint_vel={speed} --joint_acc={0.5} --joint_dec={0.5}}}"
+                # 构建自定义指令（关节位置补 0 凑齐 10 位：6 轴补 4，7 轴补 3）
+                custom_cmd = f"{{JogAnyJ --jointtarget_value={{{','.join(map(str, joints))},{','.join(['0'] * PAD_ZEROS)}}} --joint_vel={speed} --joint_acc={0.5} --joint_dec={0.5} --last_count=100}}"
                 print(f"执行指令: {custom_cmd}")
                 send_rpcsy(client, [custom_cmd], timeout_ms=5000, sleep_s=1.0)
                 

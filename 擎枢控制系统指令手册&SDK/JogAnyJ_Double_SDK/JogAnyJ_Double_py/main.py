@@ -5,21 +5,25 @@ from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 # 单侧机械臂关节数，按实际机型修改（与单臂 main1.py 一致，例如 6、7），默认 7 轴
 NUM_JOINTS_PER_ARM = 7
 
+# jointtarget_value 补零个数：总保持 10 位（6 轴补 4 个 0，7 轴补 3 个 0）
+PAD_ZEROS = 10 - NUM_JOINTS_PER_ARM
+
 # 初始化命令列表
 init_cmds = [
     "{Clear}",
 ]
 
-# JogAnyJ 启动指令 - 双臂初始位置
-zeros = ",".join(["0"] * NUM_JOINTS_PER_ARM)
+# JogAnyJ 启动指令 - 双臂初始位置（jointtarget_value 固定 10 位：关节数 + 补 0）
+zeros = ",".join(["0"] * (NUM_JOINTS_PER_ARM + PAD_ZEROS))
 Jog_start = [
-    f"{{JogAnyJ --joint_pos={{{zeros}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5"
-    f"||JogAnyJ --joint_pos={{{zeros}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5}}",
+    f"{{JogAnyJ --jointtarget_value={{{zeros}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
+    f"||JogAnyJ --jointtarget_value={{{zeros}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}}",
 ]
 
-# 双臂回零位（MoveAbsJ）
+# 双臂回零位（MoveAbsJ，按实际轴数不补 0）
+zeros_arm = ",".join(["0"] * NUM_JOINTS_PER_ARM)
 home_cmds = [
-    f"{{MoveAbsJ --jointtarget={{{zeros}}}||MoveAbsJ --jointtarget={{{zeros}}}}}",
+    f"{{MoveAbsJ --jointtarget={{{zeros_arm}}}||MoveAbsJ --jointtarget={{{zeros_arm}}}}}",
 ]
 
 # 停止指令
@@ -29,14 +33,15 @@ Jog_stop = [
 
 
 def build_joganyj_cmd(left_joints, right_joints, joint_vel, joint_acc, joint_dec):
-    """构建双臂 JogAnyJ 指令字符串，返回可直接下发的 RPC 命令。"""
-    left_str = ",".join(str(x) for x in left_joints)
-    right_str = ",".join(str(x) for x in right_joints)
+    """构建双臂 JogAnyJ 指令字符串，返回可直接下发的 RPC 命令（关节位置补 0 凑齐 10 位）。"""
+    pad = "," + ",".join(["0"] * PAD_ZEROS) if PAD_ZEROS > 0 else ""
+    left_str = ",".join(str(x) for x in left_joints) + pad
+    right_str = ",".join(str(x) for x in right_joints) + pad
     return (
-        f"{{JogAnyJ --joint_pos={{{left_str}}} --joint_vel={joint_vel} "
-        f"--joint_acc={joint_acc} --joint_dec={joint_dec}"
-        f"||JogAnyJ --joint_pos={{{right_str}}} --joint_vel={joint_vel} "
-        f"--joint_acc={joint_acc} --joint_dec={joint_dec}}}"
+        f"{{JogAnyJ --jointtarget_value={{{left_str}}} --joint_vel={joint_vel} "
+        f"--joint_acc={joint_acc} --joint_dec={joint_dec} --last_count=100"
+        f"||JogAnyJ --jointtarget_value={{{right_str}}} --joint_vel={joint_vel} "
+        f"--joint_acc={joint_acc} --joint_dec={joint_dec} --last_count=100}}"
     )
 
  

@@ -15,12 +15,13 @@ using namespace std;
 const int NUM_JOINTS_ARM1 = 7;
 const int NUM_JOINTS_ARM2 = 7;
 
-// 生成 {0,0,0,0,0,0,0} 这种字符串
+// 生成 {0,0,...,0} 格式字符串，总保持 10 位（num_joints 个关节 + 补 0：6 轴补 4，7 轴补 3）
 std::string make_zero_joint_pos(int num_joints) {
     std::string result = "{";
-    for (int i = 0; i < num_joints; ++i) {
+    int total = std::max(num_joints, 10);
+    for (int i = 0; i < total; ++i) {
         result += "0";
-        if (i < num_joints - 1) {
+        if (i < total - 1) {
             result += ",";
         }
     }
@@ -47,16 +48,18 @@ string trim(const string& str) {
     return str.substr(first, last - first + 1);
 }
 
-// 把输入的关节数组拼成 {a,b,c,d}
+// 把输入的关节数组拼成 {a,b,c,d,...}，补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
 string make_joint_pos_string(const vector<string>& joints_str) {
     string joint_pos = "{";
     for (size_t i = 0; i < joints_str.size(); ++i) {
         joint_pos += trim(joints_str[i]);
-        if (i < joints_str.size() - 1) {
-            joint_pos += ",";
-        }
+        joint_pos += ",";
     }
-    joint_pos += "}";
+    const int pad = 10 - (int)joints_str.size();
+    for (int i = 0; i < pad; ++i) {
+        joint_pos += "0";
+        joint_pos += (i == pad - 1) ? "}" : ",";
+    }
     return joint_pos;
 }
 
@@ -81,8 +84,8 @@ int main() {
 
     // 双臂 JogAnyJ 初始动作
     std::vector<std::string> jog_start_cmds = {
-        "{JogAnyJ --joint_pos=" + zero_joint_pos_arm1 + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5"
-        "||JogAnyJ --joint_pos=" + zero_joint_pos_arm2 + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5}"
+        "{JogAnyJ --jointtarget_value=" + zero_joint_pos_arm1 + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
+        "||JogAnyJ --jointtarget_value=" + zero_joint_pos_arm2 + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
     };
 
     // 双臂停止动作
@@ -158,12 +161,12 @@ int main() {
                 }
 
                 std::string custom_cmd =
-                    "{JogAnyJ --joint_pos=" + joint_pos_arm1 +
+                    "{JogAnyJ --jointtarget_value=" + joint_pos_arm1 +
                     " --joint_vel=" + std::to_string(speed) +
-                    " --joint_acc=0.5 --joint_dec=0.5"
-                    "||JogAnyJ --joint_pos=" + joint_pos_arm2 +
+                    " --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
+                    "||JogAnyJ --jointtarget_value=" + joint_pos_arm2 +
                     " --joint_vel=" + std::to_string(speed) +
-                    " --joint_acc=0.5 --joint_dec=0.5}";
+                    " --joint_acc=0.5 --joint_dec=0.5 --last_count=100}";
 
                 std::cout << "执行指令: " << custom_cmd << std::endl;
 
