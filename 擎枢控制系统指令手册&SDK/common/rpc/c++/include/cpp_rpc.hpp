@@ -20,6 +20,7 @@
 #include <functional>
 #include <future>
 #include <chrono>
+#include <limits>
 #include <thread>
 #include <utility>
 #include <inttypes.h>
@@ -66,6 +67,7 @@ namespace cpp_rpc
     constexpr int UNIQUE_CLEAR_ERR_ID = 198808;
     constexpr int RPC_ERROR_CODE = -1;
     constexpr int RPC_TIMEOUT_CODE = -3;
+    constexpr int RPC_DISCONNECTED_CODE = -4;
 
     // 连接阶段错误码
     constexpr int CONNECT_OK = 0;
@@ -310,16 +312,20 @@ namespace cpp_rpc
         {
             std::shared_ptr<std::promise<core::Msg>> promise;
             std::shared_ptr<std::atomic<bool>> valid_flag;
+            std::shared_ptr<std::atomic<int>> result_code;
             std::function<void(int, const core::Msg &)> callback;
             std::chrono::steady_clock::time_point deadline;
             PendingItem() = default;
             PendingItem(std::shared_ptr<std::promise<core::Msg>> p,
-                        std::shared_ptr<std::atomic<bool>> v)
-                : promise(std::move(p)), valid_flag(std::move(v)) {}
+                        std::shared_ptr<std::atomic<bool>> v,
+                        std::shared_ptr<std::atomic<int>> result)
+                : promise(std::move(p)), valid_flag(std::move(v)), result_code(std::move(result)) {}
             PendingItem(std::function<void(int, const core::Msg &)> cb,
                         std::shared_ptr<std::atomic<bool>> v,
+                        std::shared_ptr<std::atomic<int>> result,
                         std::chrono::steady_clock::time_point expires)
-                : valid_flag(std::move(v)), callback(std::move(cb)), deadline(expires) {}
+                : valid_flag(std::move(v)), result_code(std::move(result)),
+                  callback(std::move(cb)), deadline(expires) {}
         };
 
     public:
@@ -390,9 +396,11 @@ namespace cpp_rpc
         }
 
         CPPClient(const std::string &ip, int port, int connect_timeout_ms = 2000,
-                  PushCallback push_handler = nullptr, int send_buffer_size = 0)
+                  PushCallback push_handler = nullptr, int send_buffer_size = 0,
+                  int send_timeout_ms = 2000)
             : server_ip_(ip), server_port_(port), client_socket_(-1),
               connect_timeout_ms_(connect_timeout_ms), send_buffer_size_(send_buffer_size),
+              send_timeout_ms_(send_timeout_ms > 0 ? send_timeout_ms : 2000),
               destroyed_(false)
         {
             push_handler_ = push_handler;
@@ -418,20 +426,7 @@ namespace cpp_rpc
 
         ~CPPClient()
         {
-            // 注销接收线程
-            connected_.store(false);
-            destroyed_.store(true);
-            timeout_cv_.notify_all();
-
-            // 关闭
-            if (client_socket_ != -1)
-            {
-#ifndef WIN32
-                (void)shutdown(client_socket_, SHUT_RDWR);
-#else
-                (void)shutdown(client_socket_, SD_BOTH);
-#endif
-            }
+            Disconnect();
 
             // 资源回收
             if (recv_thread_.joinable())
@@ -454,49 +449,36 @@ namespace cpp_rpc
                 client_socket_ = -1;
 #endif
             }
-
-            {
-                std::lock_guard<std::mutex> lock(resp_map_mutex_);
-                for (auto &kv : pending_responses_)
-                {
-                    kv.second.valid_flag->store(false);
-                    if (kv.second.promise)
-                    {
-                        try
-                        {
-                            kv.second.promise->set_value(core::Msg());
-                        }
-                        catch (...)
-                        {
-                        }
-                    }
-                }
-                pending_responses_.clear();
-            }
         }
 
         template <typename RES>
-        std::pair<int, std::vector<RES>> CallAwait(const core::Msg &msg, const int64_t &timeout = 5000)
+        auto CallAwait(
+            const core::Msg &msg,
+            const int64_t &timeout = std::numeric_limits<int64_t>::max()) -> std::pair<int, std::vector<RES>>
         {
             int ret = 0;
             std::vector<RES> resp_list{};
 
-            if (client_socket_ == -1)
+            if (!IsConnected())
             {
                 snprintf(error_info_, 1024, "connection invalid.");
                 return {-1, resp_list};
             }
 
+            const auto request_deadline = DeadlineAfter(timeout);
+
             // 注册 promise
             auto promise = std::make_shared<std::promise<core::Msg>>();
             auto valid_flag = std::make_shared<std::atomic<bool>>(true);
+            auto result_code = std::make_shared<std::atomic<int>>(0);
             auto future = promise->get_future();
             {
                 std::lock_guard<std::mutex> lock(resp_map_mutex_);
-                pending_responses_[msg.seqID()] = PendingItem{promise, valid_flag};
+                pending_responses_[msg.seqID()] = PendingItem{promise, valid_flag, result_code};
             }
 
-            if (!SendMessage(msg, false))
+            const int send_code = SendMessage(msg, request_deadline);
+            if (send_code != 0)
             {
                 snprintf(error_info_, 1024, "network error while send.");
                 {
@@ -505,13 +487,16 @@ namespace cpp_rpc
                     if (it != pending_responses_.end())
                     {
                         it->second.valid_flag->store(false);
+                        if (it->second.result_code)
+                            it->second.result_code->store(send_code,
+                                                          std::memory_order_release);
                         pending_responses_.erase(it);
                     }
                 }
-                return {-1, resp_list};
+                return {send_code, resp_list};
             }
 
-            if (future.wait_for(std::chrono::milliseconds(timeout)) != std::future_status::ready)
+            if (future.wait_until(request_deadline) != std::future_status::ready)
             {
                 {
                     std::lock_guard<std::mutex> lock(resp_map_mutex_);
@@ -519,11 +504,28 @@ namespace cpp_rpc
                     if (it != pending_responses_.end())
                     {
                         it->second.valid_flag->store(false);
+                        if (it->second.result_code)
+                            it->second.result_code->store(RPC_TIMEOUT_CODE,
+                                                          std::memory_order_release);
                         pending_responses_.erase(it);
                     }
                 }
+                const int raced_code = result_code->load(std::memory_order_acquire);
+                if (raced_code == RPC_DISCONNECTED_CODE &&
+                    future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+                {
+                    (void)future.get();
+                    return {raced_code, resp_list};
+                }
                 snprintf(error_info_, 1024, "RPC timeout for seqID %ld", msg.seqID());
                 return {RPC_TIMEOUT_CODE, resp_list};
+            }
+
+            const int completion_code = result_code->load(std::memory_order_acquire);
+            if (completion_code < 0)
+            {
+                (void)future.get();
+                return {completion_code, resp_list};
             }
 
             // 解析响应
@@ -545,27 +547,33 @@ namespace cpp_rpc
             return {ret, resp_list};
         }
 
-        std::pair<int, core::Msg> CallAwaitRaw(const core::Msg &msg, const int64_t &timeout = 5000)
+        auto CallAwaitRaw(
+            const core::Msg &msg,
+            const int64_t &timeout = std::numeric_limits<int64_t>::max()) -> std::pair<int, core::Msg>
         {
             int ret = 0;
             core::Msg resp_msg{};
 
-            if (client_socket_ == -1)
+            if (!IsConnected())
             {
                 snprintf(error_info_, 1024, "connection invalid.");
                 return {-1, core::Msg{"connection invalid."}};
             }
 
+            const auto request_deadline = DeadlineAfter(timeout);
+
             // 注册 promise
             auto promise = std::make_shared<std::promise<core::Msg>>();
             auto valid_flag = std::make_shared<std::atomic<bool>>(true);
+            auto result_code = std::make_shared<std::atomic<int>>(0);
             auto future = promise->get_future();
             {
                 std::lock_guard<std::mutex> lock(resp_map_mutex_);
-                pending_responses_[msg.seqID()] = PendingItem{promise, valid_flag};
+                pending_responses_[msg.seqID()] = PendingItem{promise, valid_flag, result_code};
             }
 
-            if (!SendMessage(msg, false))
+            const int send_code = SendMessage(msg, request_deadline);
+            if (send_code != 0)
             {
                 snprintf(error_info_, 1024, "network error while send.");
                 {
@@ -574,13 +582,16 @@ namespace cpp_rpc
                     if (it != pending_responses_.end())
                     {
                         it->second.valid_flag->store(false);
+                        if (it->second.result_code)
+                            it->second.result_code->store(send_code,
+                                                          std::memory_order_release);
                         pending_responses_.erase(it);
                     }
                 }
-                return {-1, resp_msg};
+                return {send_code, resp_msg};
             }
 
-            if (future.wait_for(std::chrono::milliseconds(timeout)) != std::future_status::ready)
+            if (future.wait_until(request_deadline) != std::future_status::ready)
             {
                 {
                     std::lock_guard<std::mutex> lock(resp_map_mutex_);
@@ -588,12 +599,28 @@ namespace cpp_rpc
                     if (it != pending_responses_.end())
                     {
                         it->second.valid_flag->store(false);
+                        if (it->second.result_code)
+                            it->second.result_code->store(RPC_TIMEOUT_CODE,
+                                                          std::memory_order_release);
                         pending_responses_.erase(it);
                     }
                 }
 
+                const int raced_code = result_code->load(std::memory_order_acquire);
+                if (raced_code == RPC_DISCONNECTED_CODE &&
+                    future.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+                {
+                    return {raced_code, future.get()};
+                }
+
                 snprintf(error_info_, 1024, "RPC timeout for seqID %ld", msg.seqID());
                 return {RPC_TIMEOUT_CODE, core::Msg{std::string("RPC timeout for seqID: ") + std::to_string(msg.seqID())}};
+            }
+
+            const int completion_code = result_code->load(std::memory_order_acquire);
+            if (completion_code < 0)
+            {
+                return {completion_code, future.get()};
             }
 
             // 获取响应字符串
@@ -607,15 +634,17 @@ namespace cpp_rpc
                        const uint64_t &time_out = std::numeric_limits<uint64_t>::max(),
                        std::function<void(int, const std::vector<RES> &)> cb = nullptr)
         {
-            if (client_socket_ == -1)
+            if (!IsConnected())
             {
                 snprintf(error_info_, 1024, "connection invalid.");
                 return false;
             }
 
+            const auto request_deadline = DeadlineAfter(time_out);
+
             if (!cb)
             {
-                if (!SendMessage(msg, true))
+                if (SendMessage(msg, request_deadline) != 0)
                 {
                     snprintf(error_info_, 1024, "Failed to send message.");
                     return false;
@@ -624,6 +653,7 @@ namespace cpp_rpc
             }
 
             auto valid_flag = std::make_shared<std::atomic<bool>>(true);
+            auto result_code = std::make_shared<std::atomic<int>>(0);
             auto raw_cb = [cb](int ret, const core::Msg &resp_msg)
             {
                 std::vector<RES> resp_list{};
@@ -652,19 +682,34 @@ namespace cpp_rpc
             {
                 std::lock_guard<std::mutex> lock(resp_map_mutex_);
                 pending_responses_[msg.seqID()] = PendingItem{std::move(raw_cb), valid_flag,
-                                                              std::chrono::steady_clock::now() + std::chrono::milliseconds(time_out)};
+                                                              result_code,
+                                                              request_deadline};
             }
             timeout_cv_.notify_one();
 
-            if (!SendMessage(msg, true))
+            const int send_code = SendMessage(msg, request_deadline);
+            if (send_code != 0)
             {
                 snprintf(error_info_, 1024, "Failed to send message.");
+                bool complete_here = false;
                 {
                     std::lock_guard<std::mutex> lock(resp_map_mutex_);
-                    pending_responses_.erase(msg.seqID());
+                    auto it = pending_responses_.find(msg.seqID());
+                    if (it != pending_responses_.end())
+                    {
+                        bool expected = true;
+                        complete_here =
+                            it->second.valid_flag &&
+                            it->second.valid_flag->compare_exchange_strong(
+                                expected, false);
+                        pending_responses_.erase(it);
+                    }
                 }
-                std::vector<RES> resp_list{};
-                cb(-1, resp_list);
+                if (complete_here)
+                {
+                    std::vector<RES> resp_list{};
+                    cb(send_code, resp_list);
+                }
                 return false;
             }
 
@@ -675,7 +720,7 @@ namespace cpp_rpc
                           const uint64_t &time_out = std::numeric_limits<uint64_t>::max(),
                           std::function<void(int, const core::Msg &)> cb = nullptr)
         {
-            if (client_socket_ == -1)
+            if (!IsConnected())
             {
                 snprintf(error_info_, 1024, "connection invalid.");
                 if (cb)
@@ -683,9 +728,11 @@ namespace cpp_rpc
                 return false;
             }
 
+            const auto request_deadline = DeadlineAfter(time_out);
+
             if (!cb)
             {
-                if (!SendMessage(msg, true))
+                if (SendMessage(msg, request_deadline) != 0)
                 {
                     snprintf(error_info_, 1024, "Failed to send message.");
                     return false;
@@ -694,14 +741,17 @@ namespace cpp_rpc
             }
 
             auto valid_flag = std::make_shared<std::atomic<bool>>(true);
+            auto result_code = std::make_shared<std::atomic<int>>(0);
             {
                 std::lock_guard<std::mutex> lock(resp_map_mutex_);
                 pending_responses_[msg.seqID()] = PendingItem{std::move(cb), valid_flag,
-                                                              std::chrono::steady_clock::now() + std::chrono::milliseconds(time_out)};
+                                                              result_code,
+                                                              request_deadline};
             }
             timeout_cv_.notify_one();
 
-            if (!SendMessage(msg, true))
+            const int send_code = SendMessage(msg, request_deadline);
+            if (send_code != 0)
             {
                 snprintf(error_info_, 1024, "Failed to send message.");
                 std::function<void(int, const core::Msg &)> failed_cb;
@@ -710,12 +760,16 @@ namespace cpp_rpc
                     auto it = pending_responses_.find(msg.seqID());
                     if (it != pending_responses_.end())
                     {
-                        failed_cb = std::move(it->second.callback);
+                        bool expected = true;
+                        if (it->second.valid_flag &&
+                            it->second.valid_flag->compare_exchange_strong(
+                                expected, false))
+                            failed_cb = std::move(it->second.callback);
                         pending_responses_.erase(it);
                     }
                 }
                 if (failed_cb)
-                    failed_cb(-1, core::Msg{"Failed to send message."});
+                    failed_cb(send_code, core::Msg{"Failed to send message."});
                 return false;
             }
 
@@ -728,10 +782,30 @@ namespace cpp_rpc
             push_handler_ = cb;
         }
 
-        // 是否连接中
-        bool IsConnected()
+        // 主动关闭连接，并立即以断连错误完成所有在途请求。
+        // 该操作幂等；线程回收和 socket close 仍由析构函数负责。
+        void Disconnect() noexcept
         {
-            return connected_.load();
+            connected_.store(false, std::memory_order_release);
+            destroyed_.store(true, std::memory_order_release);
+            timeout_cv_.notify_all();
+
+            if (client_socket_ != -1)
+            {
+#ifndef WIN32
+                (void)shutdown(client_socket_, SHUT_RDWR);
+#else
+                (void)shutdown(client_socket_, SD_BOTH);
+#endif
+            }
+            FailAllPending(RPC_DISCONNECTED_CODE, "RPC client disconnected");
+        }
+
+        // 是否连接中
+        bool IsConnected() const
+        {
+            return connected_.load(std::memory_order_acquire) &&
+                   !destroyed_.load(std::memory_order_acquire);
         }
 
         // 获取错误信息
@@ -769,6 +843,8 @@ namespace cpp_rpc
                 return "恢复socket标志失败";
             case RPC_TIMEOUT_CODE:
                 return "RPC请求超时";
+            case RPC_DISCONNECTED_CODE:
+                return "RPC连接已断开";
             case RPC_ERROR_CODE:
                 return "RPC通用错误";
             default:
@@ -777,7 +853,128 @@ namespace cpp_rpc
         }
 
     private:
-        bool SendMessage(const core::Msg &msg, bool nonblocking)
+        // Process-lifetime executor: callbacks must never run on a worker owned
+        // by CPPClient, otherwise a callback releasing the final client
+        // reference would make CPPClient join its own worker thread.
+        static ThreadPool &CallbackExecutor()
+        {
+            static ThreadPool *executor = new ThreadPool(4);
+            return *executor;
+        }
+
+        void FailAllPending(int code, const std::string &reason) noexcept
+        {
+            std::unordered_map<int64_t, PendingItem> pending;
+            {
+                std::lock_guard<std::mutex> lock(resp_map_mutex_);
+                pending.swap(pending_responses_);
+            }
+
+            std::vector<std::function<void(int, const core::Msg &)>> callbacks;
+            const core::Msg failure_msg{reason};
+            for (auto &[_, item] : pending)
+            {
+                bool expected = true;
+                if (!item.valid_flag ||
+                    !item.valid_flag->compare_exchange_strong(expected, false))
+                    continue;
+
+                if (item.result_code)
+                    item.result_code->store(code, std::memory_order_release);
+
+                if (item.promise)
+                {
+                    try
+                    {
+                        item.promise->set_value(failure_msg);
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+                else if (item.callback)
+                {
+                    try
+                    {
+                        callbacks.emplace_back(std::move(item.callback));
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+            }
+
+            if (callbacks.empty())
+                return;
+
+            try
+            {
+                auto batch = std::make_shared<decltype(callbacks)>(std::move(callbacks));
+                CallbackExecutor().Enqueue(
+                    [batch = std::move(batch), code, failure_msg]() mutable
+                    {
+                        for (auto &cb : *batch)
+                        {
+                            if (!cb)
+                                continue;
+                            try
+                            {
+                                cb(code, failure_msg);
+                            }
+                            catch (...)
+                            {
+                            }
+                        }
+                    });
+            }
+            catch (...)
+            {
+                // Synchronous promises have already been completed. Allocation
+                // failure must not move callbacks back onto a CPPClient thread.
+            }
+        }
+
+        using Deadline = std::chrono::steady_clock::time_point;
+
+        static Deadline DeadlineAfter(int64_t timeout_ms)
+        {
+            if (timeout_ms == std::numeric_limits<int64_t>::max())
+                return Deadline::max();
+            if (timeout_ms <= 0)
+                return std::chrono::steady_clock::now();
+            const auto now = std::chrono::steady_clock::now();
+            const auto max_ms =
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    Deadline::max() - now)
+                    .count();
+            if (timeout_ms >= max_ms)
+                return Deadline::max();
+            return now + std::chrono::milliseconds(timeout_ms);
+        }
+
+        static Deadline DeadlineAfter(uint64_t timeout_ms)
+        {
+            if (timeout_ms == std::numeric_limits<uint64_t>::max())
+                return Deadline::max();
+            const auto now = std::chrono::steady_clock::now();
+            const auto max_ms = static_cast<uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    Deadline::max() - now)
+                    .count());
+            if (timeout_ms >= max_ms)
+                return Deadline::max();
+            return now + std::chrono::milliseconds(timeout_ms);
+        }
+
+        Deadline SendDeadline(Deadline request_deadline) const
+        {
+            const auto send_deadline =
+                std::chrono::steady_clock::now() +
+                std::chrono::milliseconds(send_timeout_ms_);
+            return std::min(request_deadline, send_deadline);
+        }
+
+        int SendMessage(const core::Msg &msg, Deadline request_deadline)
         {
 #ifdef CODEIT_1_3_0
             const size_t total_size = msg.size() + sizeof(core::MsgHeader) + 1;
@@ -786,28 +983,61 @@ namespace cpp_rpc
             send_data.get()[0] = 0x22;
             memmove(send_data.get() + 1, reinterpret_cast<const char *>(&msg.header()),
                     msg.size() + sizeof(core::MsgHeader));
-            return SendAll(send_data.get(), total_size, nonblocking);
+            return SendAll(send_data.get(), total_size, SendDeadline(request_deadline));
 #else
             return SendAll(reinterpret_cast<const char *>(&msg.header()),
-                           msg.size() + sizeof(core::MsgHeader), nonblocking);
+                           msg.size() + sizeof(core::MsgHeader),
+                           SendDeadline(request_deadline));
 #endif
         }
 
-#if 1
-        bool SendAll(const char *data, size_t size, bool nonblocking)
+        bool WaitWritable(Deadline deadline) const
         {
-            std::lock_guard<std::mutex> send_lock(send_mutex_);
+            const auto now = std::chrono::steady_clock::now();
+            if (now >= deadline)
+                return false;
+            auto wait_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                               deadline - now)
+                               .count();
+            // duration_cast truncates. Round up so poll/select cannot report a
+            // timeout just before the actual steady-clock deadline.
+            ++wait_ms;
+            if (wait_ms > std::numeric_limits<int>::max())
+                wait_ms = std::numeric_limits<int>::max();
 
 #ifdef WIN32
-            u_long old_mode = 0;
-            u_long nonblock_mode = nonblocking ? 1 : 0;
-            if (nonblocking && ioctlsocket(client_socket_, FIONBIO, &nonblock_mode) != 0)
-            {
-                return false;
-            }
+            fd_set write_set;
+            FD_ZERO(&write_set);
+            FD_SET(client_socket_, &write_set);
+            timeval timeout{static_cast<long>(wait_ms / 1000),
+                            static_cast<long>((wait_ms % 1000) * 1000)};
+            return select(0, nullptr, &write_set, nullptr, &timeout) > 0;
+#else
+            pollfd descriptor{client_socket_, POLLOUT, 0};
+            const int result = poll(&descriptor, 1, static_cast<int>(wait_ms));
+            // POLLERR/POLLHUP are also readiness: retry send() once so its
+            // errno becomes the authoritative failure reason.
+            return result > 0;
+#endif
+        }
+
+        int SendAll(const char *data, size_t size, Deadline deadline)
+        {
+            std::unique_lock<std::timed_mutex> send_lock(send_mutex_,
+                                                         std::defer_lock);
+            if (!send_lock.try_lock_until(deadline))
+                return RPC_TIMEOUT_CODE;
+
+#ifdef WIN32
+            u_long nonblock_mode = 1;
+            if (ioctlsocket(client_socket_, FIONBIO, &nonblock_mode) != 0)
+                return RPC_ERROR_CODE;
             const int flags = 0;
 #else
-            const int flags = nonblocking ? MSG_DONTWAIT : 0;
+            int flags = MSG_DONTWAIT;
+#ifdef MSG_NOSIGNAL
+            flags |= MSG_NOSIGNAL;
+#endif
 #endif
 
             size_t total_sent = 0;
@@ -823,7 +1053,7 @@ namespace cpp_rpc
                 {
                     RPC_ERROR_LOG("type=send_failed | fd=%d | target=%s:%d | errno=%d(%s) | msg=send返回0，对端关闭连接",
                                   client_socket_, server_ip_.c_str(), server_port_, errno, errno_name(errno));
-                    return false;
+                    break;
                 }
 
 #ifdef WIN32
@@ -832,128 +1062,33 @@ namespace cpp_rpc
                 {
                     RPC_ERROR_LOG("type=send_failed | fd=%d | target=%s:%d | err=%d(%s) | msg=发送数据出错",
                                   client_socket_, server_ip_.c_str(), server_port_, err, errno_name(err));
-                    return false;
+                    break;
                 }
 #else
                 if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK)
                 {
                     RPC_ERROR_LOG("type=send_failed | fd=%d | target=%s:%d | errno=%d(%s) | msg=发送数据出错",
                                   client_socket_, server_ip_.c_str(), server_port_, errno, errno_name(errno));
-                    return false;
+                    break;
                 }
 #endif
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                if (!WaitWritable(deadline))
+                    break;
             }
 
 #ifdef WIN32
-            if (nonblocking)
-            {
-                old_mode = 0;
-                ioctlsocket(client_socket_, FIONBIO, &old_mode);
-            }
+            u_long blocking_mode = 0;
+            (void)ioctlsocket(client_socket_, FIONBIO, &blocking_mode);
 #endif
 
-            return total_sent == size;
+            if (total_sent == size)
+                return 0;
+            if (destroyed_.load(std::memory_order_acquire))
+                return RPC_DISCONNECTED_CODE;
+            if (std::chrono::steady_clock::now() >= deadline)
+                return RPC_TIMEOUT_CODE;
+            return RPC_ERROR_CODE;
         }
-#else
-
-        bool SendAll(const char *data, size_t size, bool nonblocking)
-        {
-            using Clock = std::chrono::steady_clock;
-
-            const auto enter_tp = Clock::now();
-            std::unique_lock<std::mutex> send_lock(send_mutex_);
-            const auto locked_tp = Clock::now();
-
-#ifdef WIN32
-            u_long old_mode = 0;
-            u_long nonblock_mode = nonblocking ? 1 : 0;
-            if (nonblocking && ioctlsocket(client_socket_, FIONBIO, &nonblock_mode) != 0)
-            {
-                return false;
-            }
-            const int flags = 0;
-#else
-            const int flags = nonblocking ? MSG_DONTWAIT : 0;
-#endif
-
-            size_t total_sent = 0;
-            uint64_t would_block_count = 0;
-
-            while (total_sent < size && !destroyed_.load())
-            {
-                const auto sent = send(client_socket_,
-                                       data + total_sent,
-                                       size - total_sent,
-                                       flags);
-
-                if (sent > 0)
-                {
-                    total_sent += static_cast<size_t>(sent);
-                    continue;
-                }
-
-                if (sent == 0)
-                    return false;
-
-#ifdef WIN32
-                const int err = WSAGetLastError();
-                if (err != WSAEINTR && err != WSAEWOULDBLOCK)
-                    return false;
-
-                if (err == WSAEWOULDBLOCK)
-                    ++would_block_count;
-#else
-                if (errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK)
-                    return false;
-
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    ++would_block_count;
-#endif
-
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-
-            const auto end_tp = Clock::now();
-
-            const auto lock_wait_us =
-                std::chrono::duration_cast<std::chrono::microseconds>(
-                    locked_tp - enter_tp)
-                    .count();
-
-            const auto holding_lock_us =
-                std::chrono::duration_cast<std::chrono::microseconds>(
-                    end_tp - locked_tp)
-                    .count();
-
-            const auto total_us =
-                std::chrono::duration_cast<std::chrono::microseconds>(
-                    end_tp - enter_tp)
-                    .count();
-
-            if (total_us > 10000)
-            {
-                std::cout << "[SEND_BLOCK]"
-                          << " size=" << size
-                          << " lock_wait_us=" << lock_wait_us
-                          << " holding_lock_us=" << holding_lock_us
-                          << " would_block=" << would_block_count
-                          << " sent=" << total_sent
-                          << " total_us=" << total_us
-                          << std::endl;
-            }
-
-#ifdef WIN32
-            if (nonblocking)
-            {
-                old_mode = 0;
-                ioctlsocket(client_socket_, FIONBIO, &old_mode);
-            }
-#endif
-
-            return total_sent == size;
-        }
-#endif
 
         void HandleAsyncTimeouts()
         {
@@ -981,6 +1116,9 @@ namespace cpp_rpc
                         if (it->second.valid_flag &&
                             it->second.valid_flag->compare_exchange_strong(expected, false))
                         {
+                            if (it->second.result_code)
+                                it->second.result_code->store(RPC_TIMEOUT_CODE,
+                                                              std::memory_order_release);
                             callbacks.emplace_back(std::move(it->second.callback));
                         }
                         it = pending_responses_.erase(it);
@@ -989,8 +1127,8 @@ namespace cpp_rpc
 
                 for (auto &cb : callbacks)
                 {
-                    thread_pool_.Enqueue([cb = std::move(cb)]() mutable
-                                         { cb(RPC_TIMEOUT_CODE, core::Msg{}); });
+                    CallbackExecutor().Enqueue([cb = std::move(cb)]() mutable
+                                               { cb(RPC_TIMEOUT_CODE, core::Msg{}); });
                 }
             }
         }
@@ -1248,8 +1386,10 @@ namespace cpp_rpc
 
                         bool expected = true;
                         if (item.valid_flag && item.valid_flag->compare_exchange_strong(expected, false)) {
+                            if (item.result_code)
+                                item.result_code->store(0, std::memory_order_release);
                             if (item.callback) {
-                                thread_pool_.Enqueue(
+                                CallbackExecutor().Enqueue(
                                     [cb = std::move(item.callback), recv_msg]() mutable {
                                         cb(0, recv_msg);
                                     });
@@ -1269,6 +1409,8 @@ namespace cpp_rpc
                 }
             
                 connected_.store(false);
+                if (!destroyed_.load(std::memory_order_acquire))
+                    FailAllPending(RPC_DISCONNECTED_CODE, "RPC peer disconnected");
                 CPP_RPC_LOG("recv thread exit.\n"); });
 
             return CONNECT_OK;
@@ -1280,16 +1422,16 @@ namespace cpp_rpc
         int client_socket_;
         int connect_timeout_ms_;
         int send_buffer_size_;
+        int send_timeout_ms_;
 
         static constexpr size_t BUFFER_SIZE = 1024;
-        ThreadPool thread_pool_{4}; // 仅执行已就绪的异步回调，不等待网络响应
         std::condition_variable resp_cv_;
         std::thread recv_thread_;            // 客户端接收回报线程
         std::thread timeout_thread_;         // 异步请求截止时间检查线程
         std::atomic<bool> destroyed_{false}; // 客户端存活状态
         PushCallback push_handler_ = nullptr;
 
-        std::mutex send_mutex_;
+        std::timed_mutex send_mutex_;
         mutable std::mutex resp_map_mutex_;
         std::condition_variable timeout_cv_;
         std::unordered_map<int64_t, PendingItem> pending_responses_;

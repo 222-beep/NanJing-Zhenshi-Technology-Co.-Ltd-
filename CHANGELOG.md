@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-08-20
+
+### 更新擎枢控制系统指令手册&SDK（新增 ReadPdo / ReadSdo EtherCAT 数据读取）
+
+- **新增** `ReadPdo_SDK`（SD-15）与 `ReadSdo_SDK`（SD-16）EtherCAT 数据读取示例（C++ / Python 双语言），SDK 示例模块由 15 个增至 **17 个**
+- **更新** `common/rpc/c++/include/message/resp_dto.h`：恢复/新增 `RespPdo` / `RespSdo` 响应类型
+- **修复** `MoveSeriesToppJ_SDK` C2280 编译错误
+- **新增** Topic 套接字状态订阅示例（`topic_sub_socket_state.cpp` / `topic_sub_socket_state.py`）
+- **更新** `擎枢控制系统指令手册&SDK/README.md`（模块列表更新至 17 个）与根目录 `README.md`
+
+---
+
 ## 2026-08-14
 
 ### 更新擎枢控制系统指令手册&SDK（Topic 库结构精简 + 状态读取层）

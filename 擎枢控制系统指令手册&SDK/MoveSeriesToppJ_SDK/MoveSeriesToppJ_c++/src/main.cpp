@@ -253,7 +253,10 @@ int main() {
     cpp_rpc::CPPClient robot_client(robot_ip, 5868);
     disable_stdout();
     try {
-        robot_client = robot_client;  // no-op, client already constructed
+        // CPPClient 不可拷贝/赋值，此处仅校验连接状态
+        if (!robot_client.IsConnected()) {
+            throw std::runtime_error("robot client not connected");
+        }
     }
     catch (...) {
         enable_stdout();

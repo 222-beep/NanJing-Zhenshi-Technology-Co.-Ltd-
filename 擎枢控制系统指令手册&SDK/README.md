@@ -1,6 +1,6 @@
 # 机器人控制 SDK 示例集
 
-本仓库包含 **15 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、数据订阅等功能。
+本仓库包含 **17 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、EtherCAT PDO/SDO 数据读取、数据订阅等功能。
 
 ---
 
@@ -20,7 +20,7 @@
 │   │   │   │   ├── wepoll.h                  #     Windows epoll 模拟
 │   │   │   │   ├── message/                  #     消息层封装
 │   │   │   │   │   ├── rpc_client.h          #       RPC 同步/异步发送（主入口）
-│   │   │   │   │   └── resp_dto.h            #       响应数据类型定义
+│   │   │   │   │   └── resp_dto.h            #       响应数据类型定义（含 RespPdo/RespSdo）
 │   │   │   │   └── util/reflection/          #     JSON 反射
 │   │   │   │       ├── json.hpp              #         nlohmann/json
 │   │   │   │       └── easy_json.h           #         简易 JSON 工具
@@ -31,6 +31,7 @@
 │   │   │           └── arm/                  #       ARM 架构: libcpp_rpc.so
 │   │   └── python/                           # Python RPC 库
 │   │       ├── rpc_client.py                 #   RPC 客户端封装（RpcClient, send_rpcsy, send_rpc_async）
+│   │       ├── __init__.py
 │   │       └── lib/                          #   平台动态库
 │   │           ├── win/                      #     Windows: rpc.pyd
 │   │           └── linux/                    #     Linux（按 CPython ABI 分目录）
@@ -43,16 +44,16 @@
 │       ├── c++/                              # C++ 专属
 │       │   ├── include/                      #   头文件（protobuf、zmq、message 等）
 │       │   └── lib/                          #   C++ 专属预编译库 + protoc 工具
-│       │       ├── win/Release/              #     message.dll, libprotobuf.dll, zmq dll, protoc.exe 等
-│       │       └── linux/                    #     libmessage.so + protobuf/zmq（20.04 ABI 基线，按架构平铺）
-│       │           ├── x86/                  #       x86
-│       │           └── arm/                  #       ARM
+│       │       ├── win/Release/              #     message.dll, libprotobuf.dll, protoc.exe 等
+│       │       └── linux/                    #     libmessage.so + protobuf/zmq（平铺，Ubuntu 20.04 ABI）
+│       │           ├── x86/                  #       x86 架构
+│       │           └── arm/                  #       ARM 架构
 │       └── python/                           # Python 专属
-│           └── lib/                          #   topic.so/pyd + protobuf/zmq 依赖
-│               ├── win/                      #     libprotobuf.dll, zmq dll + cp310/topic.pyd
-│               └── linux/                    #     libprotobuf.so.32, libzmq.so.5 + cp310/topic.so
-│                   ├── x86/                  #       x86（按 CPython ABI 分目录，当前仅 cp310）
-│                   └── arm/                  #       ARM（同上）
+│           └── lib/                          #   topic.pyd/so + protobuf/zmq
+│               ├── win/                      #     cp310/topic.pyd, libprotobuf.dll, libzmq dll
+│               └── linux/                    #     依赖库 + 按 CPython ABI 分目录
+│                   ├── x86/                  #       x86: libprotobuf.so.32, libzmq.so.5, cp310/topic.so
+│                   └── arm/                  #       ARM: 同上
 │
 ├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动
 ├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
@@ -68,14 +69,16 @@
 ├── IOModule_SDK/                           # SD-12  IO 模块控制（DI/DO/脉冲）
 ├── SyncAsync_SDK/                          # SD-13  同步 vs 异步发送对比
 ├── SubLoop_SDK/                            # SD-14  子循环控制（双模型并行）
-└── Topic_SDK/                              # SD-15  实时数据订阅（独立通信库）
+├── ReadPdo_SDK/                            # SD-15  EtherCAT PDO 数据读取
+├── ReadSdo_SDK/                            # SD-16  EtherCAT SDO 数据读取
+└── Topic_SDK/                              # SD-17  实时数据订阅（独立通信库）
 ```
 
 ---
 
 ## SDK 分类总览
 
-### A 类：标准 RPC SDK（14 个）
+### A 类：标准 RPC SDK（16 个）
 
 依赖 `common/rpc/` 公共库，通过 RPC 协议（端口 **5868**）与机器人控制器通信。
 
@@ -95,6 +98,8 @@
 | SD-12 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 交互菜单 |
 | SD-13 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 交互菜单 |
 | SD-14 | SubLoop | 子循环控制（双模型并行执行） | 交互输入 |
+| SD-15 | ReadPdo | EtherCAT PDO 数据读取（ReadPdo 指令） | 交互菜单 |
+| SD-16 | ReadSdo | EtherCAT SDO 数据读取（ReadSdo 指令） | 交互菜单 |
 
 ### B 类：独立通信 SDK（1 个）
 
@@ -102,7 +107,7 @@
 
 | 编号 | SDK | 功能 |
 |------|-----|------|
-| SD-15 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
+| SD-17 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
 
 ---
 
@@ -119,7 +124,7 @@
 │ ② Topic_SDK    独立编译（与 ① 无依赖关系）          │
 │    依赖：common/topic/ 公共库                        │
 ├──────────────────────────────────────────────────┤
-│ ③ 其余 14 个标准 RPC SDK                           │
+│ ③ 其余 16 个标准 RPC SDK                           │
 │    均依赖 ① common/rpc/，彼此独立无先后顺序          │
 │    可任意顺序编译                                    │
 └──────────────────────────────────────────────────┘
@@ -157,7 +162,7 @@
 
 ### 依赖库
 
-**A 类 — 标准 RPC SDK（14 个）：**
+**A 类 — 标准 RPC SDK（16 个）：**
 
 | 库 | 用途 |
 |----|------|
@@ -188,7 +193,7 @@
 
 ### 标准 RPC SDK 编译
 
-以 MoveAbsJ 为例，其余 13 个标准 SDK 编译方式完全一致。
+以 MoveAbsJ 为例，其余 15 个标准 SDK 编译方式完全一致。
 
 **Windows：**
 
@@ -228,11 +233,11 @@ cmake --build . --config Release
 ```bash
 cd Topic_SDK/topic_c++
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release   # 自动检测架构（x86/arm）
+cmake .. -DCMAKE_BUILD_TYPE=Release -DUBUNTU_VERSION=20.04  # 或 22.04，根据实际系统版本选择
 make
 ```
 
-编译完成后会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录；若环境无 `protoc`，自动降级使用 `proto_generated/` 预生成的 pb 文件。
+编译完成后会自动复制依赖的 DLL（`libprotobuf.dll`、`libprotoc.dll`、`libzmq-v142-mt-4_3_6.dll`、`message.dll`）到 exe 目录。
 
 ---
 
@@ -241,11 +246,11 @@ make
 Python SDK 无需编译，所有模块开箱即用。
 
 ```bash
-# 修改 main.py 中的 ROBOT_IP 为实际控制器 IP 后直接运行
+# 修改 main.py 中的 ROBOT_IP 为实际控制器 IP 后直接运行（示例默认已统一为 192.168.11.11）
 python MoveAbsJ_SDK/MoveAbsJ_py/main.py
 ```
 
-`rpc_client.py` 会自动检测操作系统、架构与 CPython ABI，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下按当前 CPython 版本选择 ABI 目录（如 Python 3.10 → `linux/<arch>/cp310/`），目前仅提供 `cp310`，请使用 CPython 3.10 运行。
+`rpc_client.py` 会自动检测操作系统、架构和当前 CPython ABI，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下按 CPython ABI 选择子目录（如 CPython 3.10 → `cp310/`），当前仅提供 `cp310` 预编译库，其他 Python 版本需自行编译。
 
 ---
 
@@ -260,9 +265,9 @@ set(COMMON_DIR "${CMAKE_SOURCE_DIR}/../../common/rpc/c++")
 include_directories("${COMMON_DIR}/include")
 ```
 
-编译时自动根据平台与架构选择对应库文件：
+编译时自动根据平台和架构选择对应库文件：
 - **Windows**: `common/rpc/c++/lib/win/Release/`
-- **Linux**: `common/rpc/c++/lib/linux/<arch>/`，其中 `<arch>` 为 `x86` / `arm`（库目录按架构平铺，无版本子目录）
+- **Linux**: `common/rpc/c++/lib/linux/<arch>/`，其中 `<arch>` 为 `x86` / `arm`（自动检测，无需指定 Ubuntu 版本）
 
 ### Topic SDK
 
@@ -274,12 +279,12 @@ include_directories("${TOPIC_COMMON_DIR}/c++/include")
 ```
 
 库文件按两层目录组织：
-- **c++/lib/**：C++ 专属库（message）及编译链接用的 protobuf/zmq，含 protoc 工具
-- **python/lib/**：Python 专属扩展（cp310/topic.so/pyd）及运行时依赖的 protobuf/zmq
+- **c++/lib/**：C++ 专属库（message）及编译链接用的 protobuf/zmq
+- **python/lib/**：Python 专属扩展（cp310/topic.pyd、topic.so）及运行时加载的 protobuf/zmq
 
-编译时自动根据平台与架构选择对应库文件（Linux 统一使用 Ubuntu 20.04 ABI 基线）：
+编译时自动根据平台和架构选择对应库文件：
 - **Windows**: `common/topic/c++/lib/win/Release/`
-- **Linux**: `common/topic/c++/lib/linux/<arch>/`，其中 `<arch>` 为 `x86` / `arm`
+- **Linux**: `common/topic/c++/lib/linux/<arch>/`（平铺存放，Ubuntu 20.04 ABI 基线）
 
 ### Python SDK
 
@@ -291,7 +296,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'common',
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 ```
 
-Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、架构与 CPython ABI，从 `common/topic/python/lib/` 加载匹配的动态库（如 `linux/<arch>/cp310/topic.so`，仅支持 CPython 3.10）。
+Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、架构和当前 CPython ABI，从 `common/topic/python/lib/` 加载匹配的动态库（Linux 按 ABI 子目录如 `cp310/`）。
 
 ---
 
@@ -299,7 +304,7 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 
 ### 1. ROBOT_IP 配置
 
-每个 SDK 的 `main.py` / `main.cpp` 中都有一个 `ROBOT_IP` / `robot_ip` 变量，**运行前必须修改为实际机器人控制器的 IP 地址**。
+每个 SDK 的 `main.py` / `main.cpp` 中都有一个 `ROBOT_IP` / `robot_ip` 变量（示例代码默认已统一为 `192.168.11.11`），**运行前若控制器 IP 不同，必须修改为实际机器人控制器的 IP 地址**。Topic SDK 的发布端 IP 变量为 `remote_ip`（C++）/ `PUBLISHER_IP`（Python），同样遵循此约定。
 
 ### 2. 同步 vs 异步 RPC
 
@@ -311,6 +316,7 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 - **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。适合 MoveAbsJ、JogC 等常规运动。
 - **异步 RPC**：快速下发指令后立即返回，不阻塞等待。适合 SpeedL 在线规划、ForcePositionHybridControl 持续力控等场景。
 - **SubLoop 特殊要求**：第一条指令**必须**使用异步发送，且 timeout 要足够大。
+- **带扩展字段的响应**：ReadPdo / ReadSdo 指令的返回值带 `pdo_value` / `sdo_value` 扩展字段，C++ 侧使用 `send_rpcsy<RespPdo>()` / `send_rpcsy<RespSdo>()` 解析（类型定义见 `resp_dto.h`）；Python 侧通过 `CallAwaitRaw` 获取原始 JSON 后自行解析。
 
 ### 3. 超时参数单位
 
@@ -342,7 +348,7 @@ Topic SDK 使用独立的 ZeroMQ + Protobuf 通信栈，**不依赖** `common/rp
 
 ## 快速开始
 
-1. **确认机器人控制器 IP**，在对应 SDK 的源码中修改 `ROBOT_IP` / `robot_ip`
+1. **确认机器人控制器 IP**（示例默认已统一为 `192.168.11.11`），在对应 SDK 的源码中修改 `ROBOT_IP` / `robot_ip`（IP 相同时可跳过）
 2. **Python 直接运行**：`python <SDK目录>/<SDK名>_py/main.py`
 3. **C++ 先编译再运行**：
 

@@ -20,7 +20,7 @@ struct TwoFingerGripperYSStatus {
 #pragma pack()
 
 int main() {
-    std::string remote_ip = "192.168.2.100";  // 请修改为实际发布者 IP
+    std::string remote_ip = "192.168.11.11";  // 请修改为实际发布者 IP
     start_subscriber(remote_ip);
     std::cout << "Subscriber started, listening to " << remote_ip << ":19091" << std::endl;
     std::cout << "Direct mode — jointtarget / robottarget\n" << std::endl;

@@ -26,7 +26,7 @@ struct TwoFingerGripperStatus {
 #pragma pack()
 
 int main() {
-    std::string remote_ip = "192.168.2.216";
+    std::string remote_ip = "192.168.11.11";
     start_subscriber(remote_ip);
 
     while (true) {

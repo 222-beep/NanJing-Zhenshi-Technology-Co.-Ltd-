@@ -21,6 +21,8 @@
 //  SpeedL, Stop, Start ...
 //
 //  PointChooseIDMove          PointChooseIDMoveResp    target_pq[7]
+//  ReadPdo                    RespPdo                  pdo_value
+//  ReadSdo                    RespSdo                  sdo_value
 //
 //  如果你的指令有额外字段，照下面的模板新增即可。
 
@@ -72,6 +74,82 @@ inline void from_json(const nlohmann::json& j, PointChooseIDMoveResp& r) {
 }
 
 // ==================================================================
+//  响应类型 ③：RespPdo — ReadPdo 指令专用，扩展了 pdo_value
+//
+//  对应的 JSON:
+//    {"return_code":0, "subcmd_index":0, "return_message":"",
+//     "pdo_value":1234}
+//                        ↑ 服务端 JSON 可能不带此字段，缺失时
+//                          has_pdo_value 保持 false，不报错
+// ==================================================================
+
+struct RespPdo {
+    int32_t return_code = 0;
+    int32_t subcmd_index = 0;
+    std::string return_message;
+    int32_t pdo_value = 0;
+    bool has_pdo_value = false;   // 服务端 JSON 可能不带此字段
+    JSON_HELP(subcmd_index, return_code, return_message, pdo_value);
+};
+
+// 自定义 from_json，让 pdo_value 可选（JSON 中没有时不报错）
+inline void to_json(nlohmann::json& j, const RespPdo& r) {
+    j = nlohmann::json{
+        {"return_code", r.return_code},
+        {"subcmd_index", r.subcmd_index},
+        {"return_message", r.return_message},
+        {"pdo_value", r.pdo_value}
+    };
+}
+inline void from_json(const nlohmann::json& j, RespPdo& r) {
+    j.at("return_code").get_to(r.return_code);
+    j.at("subcmd_index").get_to(r.subcmd_index);
+    j.at("return_message").get_to(r.return_message);
+    if (j.contains("pdo_value") && !j.at("pdo_value").is_null()) {
+        j.at("pdo_value").get_to(r.pdo_value);
+        r.has_pdo_value = true;
+    }
+}
+
+// ==================================================================
+//  响应类型 ④：RespSdo — ReadSdo 指令专用，扩展了 sdo_value
+//
+//  对应的 JSON:
+//    {"return_code":0, "subcmd_index":0, "return_message":"",
+//     "sdo_value":1234}
+//                        ↑ 服务端 JSON 可能不带此字段，缺失时
+//                          has_sdo_value 保持 false，不报错
+// ==================================================================
+
+struct RespSdo {
+    int32_t return_code = 0;
+    int32_t subcmd_index = 0;
+    std::string return_message;
+    int32_t sdo_value = 0;
+    bool has_sdo_value = false;   // 服务端 JSON 可能不带此字段
+    JSON_HELP(subcmd_index, return_code, return_message, sdo_value);
+};
+
+// 自定义 from_json，让 sdo_value 可选（JSON 中没有时不报错）
+inline void to_json(nlohmann::json& j, const RespSdo& r) {
+    j = nlohmann::json{
+        {"return_code", r.return_code},
+        {"subcmd_index", r.subcmd_index},
+        {"return_message", r.return_message},
+        {"sdo_value", r.sdo_value}
+    };
+}
+inline void from_json(const nlohmann::json& j, RespSdo& r) {
+    j.at("return_code").get_to(r.return_code);
+    j.at("subcmd_index").get_to(r.subcmd_index);
+    j.at("return_message").get_to(r.return_message);
+    if (j.contains("sdo_value") && !j.at("sdo_value").is_null()) {
+        j.at("sdo_value").get_to(r.sdo_value);
+        r.has_sdo_value = true;
+    }
+}
+
+// ==================================================================
 //  打印接口（给 send_rpcsy 模板用）
 //
 //  RespDemo 不需要额外打印 → 空的默认实现
@@ -102,6 +180,24 @@ struct RespPrinter<PointChooseIDMoveResp> {
                 printf("%.6f", r.target_pq[i]);
             }
             printf("]\n");
+        }
+    }
+};
+
+template<>
+struct RespPrinter<RespPdo> {
+    static void print_extra(const RespPdo& r) {
+        if (r.has_pdo_value) {
+            printf("pdo_value: %d (0x%X)\n", r.pdo_value, r.pdo_value);
+        }
+    }
+};
+
+template<>
+struct RespPrinter<RespSdo> {
+    static void print_extra(const RespSdo& r) {
+        if (r.has_sdo_value) {
+            printf("sdo_value: %d (0x%X)\n", r.sdo_value, r.sdo_value);
         }
     }
 };
