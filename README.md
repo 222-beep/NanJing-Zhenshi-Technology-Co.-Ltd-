@@ -9,7 +9,7 @@
 ```
 .
 ├── 工智AI工艺包使用文档/               # 工智AI工艺包使用说明
-├── 擎枢控制系统指令手册&SDK/           # 指令手册与 17 个 SDK 示例（C++ / Python）
+├── 擎枢控制系统指令手册&SDK/           # 指令手册与 18 个 SDK 示例（C++ / Python）
 ├── 擎枢控制系统最小上位机例程/         # 基础 SDK 包、ROS SDK 包与使用手册
 └── Web使用手册v1.7.3.pdf              # Web 端使用手册
 ```
@@ -24,7 +24,7 @@
 
 ### 2. 擎枢控制系统指令手册&SDK
 
-包含**控制器指令手册**以及 **17 个 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本：
+包含**控制器指令手册**以及 **18 个 SDK 示例模块**，除 RealSenseCamera 仅提供 Python 版外，每个模块均提供 C++ 和 Python 双语言版本：
 
 | 分类 | SDK | 功能 |
 |------|-----|------|
@@ -37,6 +37,7 @@
 | 通信模式 | SyncAsync、SubLoop | 同步异步对比 / 子循环控制 |
 | 数据订阅 | Topic | 实时状态数据订阅（ZMQ + Protobuf） |
 | EtherCAT 数据读取 | ReadPdo、ReadSdo | PDO / SDO 数据读取 |
+| 图像采集 | RealSenseCamera | 两路 RealSense HTTP MJPEG 图像获取（Python） |
 
 > 详细说明见 `擎枢控制系统指令手册&SDK/README.md`
 
