@@ -52,8 +52,12 @@ endif(MSVC)
 
 add_executable(Hello_MoveS src/main.cpp)
 
+# MoveS 同步发送 + SetEgmOffset 在线偏移/Stop 独立线程发送示例
+add_executable(Hello_MoveS_EgmOffset src/main_moves_egm_offset.cpp)
+
 if(WIN32)
 target_link_libraries(Hello_MoveS cpp_rpc)
+target_link_libraries(Hello_MoveS_EgmOffset cpp_rpc)
 
 # 编译后自动把 dll 复制到 exe 旁边（否则运行时会报"找不到 dll"）
 add_custom_command(TARGET Hello_MoveS POST_BUILD
@@ -62,7 +66,14 @@ add_custom_command(TARGET Hello_MoveS POST_BUILD
         "$<TARGET_FILE_DIR:Hello_MoveS>"
 )
 
+add_custom_command(TARGET Hello_MoveS_EgmOffset POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDK_LIB_DIR}/cpp_rpc.dll"
+        "$<TARGET_FILE_DIR:Hello_MoveS_EgmOffset>"
+)
+
 elseif(UNIX)
 target_link_libraries(Hello_MoveS cpp_rpc pthread)
+target_link_libraries(Hello_MoveS_EgmOffset cpp_rpc pthread)
 
 endif()

@@ -1,6 +1,6 @@
 # 机器人控制 SDK 示例集
 
-本仓库包含 **17 个机器人控制 SDK 示例模块**，每个模块均提供 C++ 和 Python 双语言版本，通过 RPC（Remote Procedure Call）协议与机器人控制器通信，可实现关节运动、笛卡尔运动、力控、IO 控制、EtherCAT PDO/SDO 数据读取、数据订阅等功能。
+本仓库包含 **18 个机器人控制 SDK 示例模块**。标准运动与控制模块提供 C++ 和 Python 双语言版本；RealSenseCamera 当前提供 Python 版本。各模块可通过 RPC、Topic 或 HTTP 图像接口与机器人控制器通信，实现关节运动、笛卡尔运动、力控、IO 控制、EtherCAT PDO/SDO 数据读取、数据订阅及相机图像获取等功能。
 
 ---
 
@@ -71,7 +71,8 @@
 ├── SubLoop_SDK/                            # SD-14  子循环控制（双模型并行）
 ├── ReadPdo_SDK/                            # SD-15  EtherCAT PDO 数据读取
 ├── ReadSdo_SDK/                            # SD-16  EtherCAT SDO 数据读取
-└── Topic_SDK/                              # SD-17  实时数据订阅（独立通信库）
+├── Topic_SDK/                              # SD-17  实时数据订阅（独立通信库）
+└── RealSenseCamera_SDK/                    # SD-18  两路 RealSense HTTP 图像（Python）
 ```
 
 ---
@@ -109,6 +110,16 @@
 |------|-----|------|
 | SD-17 | Topic | 实时数据订阅（关节数据、笛卡尔位姿、子系统状态等） |
 
+### C 类：HTTP 图像 SDK（1 个）
+
+| 编号 | SDK | 功能 |
+|------|-----|------|
+| SD-18 | RealSenseCamera | 两路 RealSense HTTP MJPEG 图像获取（Python） |
+
+RealSenseCamera 通过公共 RPC 启停 codeit-deploy 图像服务，并通过 `6888` 端口读取
+HTTP MJPEG，不使用相机 Topic。图片 observation 格式为 `RGB/HWC/numpy.uint8`，
+详见 `RealSenseCamera_SDK/README.md`。
+
 ---
 
 ## 编译与运行顺序
@@ -127,6 +138,9 @@
 │ ③ 其余 16 个标准 RPC SDK                           │
 │    均依赖 ① common/rpc/，彼此独立无先后顺序          │
 │    可任意顺序编译                                    │
+├──────────────────────────────────────────────────┤
+│ ④ RealSenseCamera SDK（Python）                    │
+│    复用 ① 启停图像服务，通过 HTTP 获取 MJPEG          │
 └──────────────────────────────────────────────────┘
 ```
 
@@ -178,6 +192,14 @@
 | ZMQ (libzmq) | 4.3.6+ | 消息传输 |
 | message | 自定义库 | 消息总线实现 |
 | pthread | — | Linux 线程库 |
+
+**C 类 — RealSenseCamera SDK（Python）：**
+
+| 库 | 用途 |
+|----|------|
+| common/rpc/python | 启动和停止 codeit-deploy 图像服务 |
+| numpy | 图像数组 |
+| opencv-python | JPEG 解码和实时预览 |
 
 ### 已验证的编译环境
 
@@ -248,6 +270,13 @@ Python SDK 无需编译，所有模块开箱即用。
 ```bash
 # 修改 main.py 中的 ROBOT_IP 为实际控制器 IP 后直接运行（示例默认已统一为 192.168.11.11）
 python MoveAbsJ_SDK/MoveAbsJ_py/main.py
+```
+
+RealSenseCamera 需要额外安装 `numpy` 和 `opencv-python`：
+
+```bash
+python3.10 -m pip install -r RealSenseCamera_SDK/RealSenseCamera_py/requirements.txt
+python3.10 RealSenseCamera_SDK/RealSenseCamera_py/main.py
 ```
 
 `rpc_client.py` 会自动检测操作系统、架构和当前 CPython ABI，加载 `common/rpc/python/lib/` 下匹配当前平台的 `.pyd`/`.so` 动态库。Linux 下按 CPython ABI 选择子目录（如 CPython 3.10 → `cp310/`），当前仅提供 `cp310` 预编译库，其他 Python 版本需自行编译。

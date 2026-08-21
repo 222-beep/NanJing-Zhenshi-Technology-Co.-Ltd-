@@ -1,166 +1,94 @@
 ﻿#include "rpc_client.h"
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <string>
-#include <sstream>
-#include <algorithm>
 
-using namespace std;
-
-// 初始化命令列表
-vector<string> init_cmds = {
-    "{Clear}",
-    "{Disable}",
-    "{Enable}",
-};
-
-struct TrajectoryPoint {
-    string name;
-    string type;             // "moves"
-    vector<double> values;   // x,y,z,q1,q2,q3,q4
-};
-
-static vector<double> parse_values(const string& input) {
-    vector<double> values;
-    stringstream ss(input);
-    string item;
-
-    while (getline(ss, item, ',')) {
-        values.push_back(stod(item));
-    }
-    return values;
-}
-
-static string build_value_string(const vector<double>& values) {
-    ostringstream oss;
-    for (size_t i = 0; i < values.size(); ++i) {
-        if (i > 0) oss << ",";
-        oss << values[i];
-    }
-    return oss.str();
-}
-
-static void print_vector(const vector<double>& values) {
-    cout << "[";
-    for (size_t i = 0; i < values.size(); ++i) {
-        if (i > 0) cout << ", ";
-        cout << values[i];
-    }
-    cout << "]";
-}
+// ==================================================================
+//  main  ——  使用示例
+// ==================================================================
 
 int main() {
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
     const std::string robot_ip = "192.168.11.11";
+
+    // ---- 命令定义 --------------------------------------------------
+
+    std::vector<std::string> init_cmds = {
+        "{Clear}",
+        "{Disable}",
+        "{Enable}",
+        "{Var --clear}",
+        // 定义轨迹目标点变量（笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
+        "{Var --type=robottarget --name=p1 --value={0.32,-0.32,0.48,0,1,0,0}}"
+    };
+
+    // MoveS 轨迹命令：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
+    std::vector<std::string> moves_cmds = {
+        "{MoveS --type=first_insert}",
+        "{MoveS --type=insert --robottarget_var=p1}",
+        "{MoveS --type=start}"
+    };
+
+    // 停止命令
+    std::vector<std::string> stop_cmds = {
+        "{Stop --last_count=10}"
+    };
+
+    std::vector<std::string> your_cmds = {
+        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
+
+        //add your cmds
+
+    };
+
+    // ---- 连接机器人控制器 -------------------------------------------
+
+    std::cout << "Connecting: " << std::endl;
     cpp_rpc::CPPClient client(robot_ip, 5868);
-
-    // 发送初始化指令
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
-
-    vector<TrajectoryPoint> trajectory_points;
-    string user_input;
-
-    while (true) {
-        cout << "\n=== MoveS 轨迹控制 ===" << endl;
-        cout << "start_moves    - 开始MoveS轨迹（设置起点）" << endl;
-        cout << "add_moves      - 添加MoveS轨迹点" << endl;
-        cout << "execute        - 执行轨迹" << endl;
-        cout << "clear_points   - 清除所有轨迹点" << endl;
-        cout << "show_points    - 显示当前轨迹点" << endl;
-        cout << "exit           - 退出程序" << endl;
-
-        cout << "请输入命令: ";
-        getline(cin, user_input);
-
-        transform(user_input.begin(), user_input.end(), user_input.begin(),
-                  [](unsigned char c) { return static_cast<char>(tolower(c)); });
-
-        if (user_input == "start_moves") {
-            cout << "设置MoveS起点（当前位置）" << endl;
-            send_rpcsy<RespDemo>(client, {"{MoveS --type=first_insert}"}, 500, 5000);
-
-            trajectory_points.clear();
-            cout << "MoveS起点已设置" << endl;
-        }
-
-        else if (user_input == "add_moves") {
-            try {
-                cout << "请输入目标点坐标和姿态（x,y,z,q1,q2,q3,q4）：" << endl;
-                cout << "示例：0.32,-0.32,0.48,0,1,0,0" << endl;
-
-                string target_input;
-                cout << "目标点: ";
-                getline(cin, target_input);
-
-                vector<double> values = parse_values(target_input);
-                if (values.size() != 7) {
-                    cout << "错误: 需要7个值（x,y,z,q1,q2,q3,q4）!" << endl;
-                    continue;
-                }
-
-                string point_name = "p" + to_string(trajectory_points.size() + 1);
-                string value_str = build_value_string(values);
-
-                string var_cmd =
-                    "{Var --type=robottarget --name=" + point_name +
-                    " --value={" + value_str + "}}";
-
-                string move_cmd =
-                    "{MoveS --type=insert --robottarget_var=" + point_name + "}";
-
-                send_rpcsy<RespDemo>(client, {var_cmd}, 200, 5000);
-                send_rpcsy<RespDemo>(client, {move_cmd}, 500, 5000);
-
-                trajectory_points.push_back({point_name, "moves", values});
-
-                cout << "MoveS轨迹点 " << point_name << " 已添加" << endl;
-            }
-            catch (const exception& e) {
-                cout << "输入格式错误! 请确保输入的是数字。" << endl;
-                cout << "错误信息: " << e.what() << endl;
-            }
-        }
-
-        else if (user_input == "execute") {
-            if (trajectory_points.empty()) {
-                cout << "错误: 没有轨迹点可执行!" << endl;
-                continue;
-            }
-
-            cout << "开始执行MoveS轨迹，共 " << trajectory_points.size() << " 个轨迹点..." << endl;
-            send_rpcsy<RespDemo>(client, {"{MoveS --type=start}"}, 1000, 10000);
-            cout << "MoveS轨迹执行完成!" << endl;
-        }
-
-        else if (user_input == "clear_points") {
-            send_rpcsy<RespDemo>(client, {"{Var --clear}"}, 500, 5000);
-            trajectory_points.clear();
-            cout << "所有MoveS轨迹点已清除" << endl;
-        }
-
-        else if (user_input == "show_points") {
-            cout << "当前MoveS轨迹点数量: " << trajectory_points.size() << endl;
-
-            for (size_t i = 0; i < trajectory_points.size(); ++i) {
-                const auto& point = trajectory_points[i];
-                cout << "  " << i + 1 << ". MoveS点 " << point.name << ": ";
-                print_vector(point.values);
-                cout << endl;
-            }
-        }
-
-        else if (user_input == "exit") {
-            cout << "退出程序..." << endl;
-            send_rpcsy<RespDemo>(client, {"{Stop --last_count=10}"}, 1000, 5000);
-            break;
-        }
-
-        else {
-            cout << "未知命令，请重新输入!" << endl;
-        }
+    if (!client.IsConnected()) {
+        std::cerr << "Connection failed! Aborting all commands." << std::endl;
+        return -1;
     }
+    std::cout << "Connected: " << std::endl;
+
+    // ==================================================================
+    //  示例 1：通用同步 RPC（最常见用法）
+    //  返回值只有 return_code / subcmd_index / return_message
+    // ==================================================================
+    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
+    send_rpcsy<RespDemo>(client, moves_cmds, 500, 10000);
+    send_rpcsy<RespDemo>(client, stop_cmds, 1000, 5000);
+
+    // ==================================================================
+    //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    // ==================================================================
+    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
+    // send_rpcAsy(client, moves_cmds, 500, 10000);
+
+    // // ==================================================================
+    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
+    // //  当某个指令返回了额外的字段时，使用专用的响应类型
+    // // ==================================================================
+    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
+    // core::Msg req(your_cmds[0]);
+    // req.setMsgID(10001);
+    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
+    //
+    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
+    // if (results.first == 0 && !results.second.empty()) {
+    //     std::vector<double>& pq = results.second[0].target_pq;
+    //     char buf[512];
+    //     snprintf(buf, sizeof(buf),
+    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
+    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
+    //     std::vector<std::string> blend_cmds = {
+    //         "{MoveBlend --type=first_insert}",
+    //         buf,
+    //         "{MoveBlend --type=start}"
+    //     };
+    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
+    // }
 
     return 0;
 }

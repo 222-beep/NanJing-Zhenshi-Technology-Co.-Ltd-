@@ -16,22 +16,20 @@ init_cmds = [
     "{Enable}",
 ]
 
-# ReadSdo 指令参数（可在菜单中随时修改 slave_id/index/sub_index/size）
+# ReadSdo 指令参数（可自行修改）
 # slave_id  : 从站编号（从 0 开始，0 通常代表网络中第一个从站）
 # index     : 对象字典主索引（十六进制）
 # sub_index : 对象字典子索引（十六进制）
 # size      : 字节长度，指定要读取的数据大小
 # loop      : 循环次数，指令命令执行的总次数
-slave_id = 5
-sdo_index = 0x6064
-sdo_sub_index = 0x00
-sdo_size = 4
+readsdo_cmds = [
+    "{ReadSdo --slave_id=5 --index=0x6064 --sub_index=0x00 --size=4 --loop=1}"
+]
 
-
-def build_readsdo_cmd() -> str:
-    """用当前参数拼接 ReadSdo 指令"""
-    return (f"{{ReadSdo --slave_id={slave_id} --index=0x{sdo_index:04X} "
-            f"--sub_index=0x{sdo_sub_index:02X} --size={sdo_size} --loop=1}}")
+# 用户自定义指令列表
+your_cmds = [
+    # 添加你的指令
+]
 
 
 def send_readsdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
@@ -60,74 +58,32 @@ def send_readsdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
 
 
 def main():
-    """主函数 - ReadSdo 指令交互发送"""
-    global slave_id, sdo_index, sdo_sub_index, sdo_size
+    """主函数"""
+    # 创建客户端
     client = RpcClient(ROBOT_IP)
 
     if not client.is_connected():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 发送初始化指令
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500, debug=True)
-    print("初始化完成")
+    # 示例 1：通用同步 RPC（最常见用法）
+    # ReadSdo 走原始 JSON 接口解析扩展返回值（sdo_value）
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500)
 
-    while True:
-        print("\n=== ReadSdo 指令菜单 ===")
-        print("readsdo  - 读取 SDO 数据  ")
-        print("set      - 修改参数(slave_id/index/sub_index/size)")
-        print("exit     - 退出程序      ")
-        print(f"当前参数: slave_id={slave_id}  index=0x{sdo_index:04X}  sub_index=0x{sdo_sub_index:02X}  size={sdo_size}")
-
-        user_input = input("请输入命令: ").strip()
-
-        if user_input == "readsdo":
-            # 用当前参数拼接 ReadSdo 指令，走原始 JSON 接口解析完整返回值
-            if not client.is_connected():
-                print(f"[SYNC] Connection lost! {client.error_info()}")
-            else:
-                resp_json = send_readsdo_raw(client, build_readsdo_cmd())
-                if isinstance(resp_json, list):
-                    for r in resp_json:
-                        print(f"[ReadSdo] subcmd_index: {r.get('subcmd_index')}")
-                        print(f"[ReadSdo] return_code: {r.get('return_code')}")
-                        print(f"[ReadSdo] return_message: {r.get('return_message')}")
-                        if 'sdo_value' in r:
-                            # 兼容数字和 "0x..." 字符串两种返回形式
-                            try:
-                                v = int(r['sdo_value'], 0) if isinstance(r['sdo_value'], str) else int(r['sdo_value'])
-                                print(f"[ReadSdo] sdo_value: {v} (0x{v:X})")
-                            except (ValueError, TypeError):
-                                print(f"[ReadSdo] sdo_value: {r['sdo_value']}")
-                print("[ReadSdo] 指令已发送")
-
-        elif user_input == "set":
-            param = input("请输入要修改的参数名 (slave_id/index/sub_index/size): ").strip()
-            value = input("请输入新值（index/sub_index 支持 0x 十六进制）: ").strip()
-            try:
-                if param == "slave_id":
-                    slave_id = int(value)
-                    print(f"slave_id 已修改为: {slave_id}")
-                elif param == "index":
-                    sdo_index = int(value, 0)
-                    print(f"index 已修改为: 0x{sdo_index:04X}")
-                elif param == "sub_index":
-                    sdo_sub_index = int(value, 0)
-                    print(f"sub_index 已修改为: 0x{sdo_sub_index:02X}")
-                elif param == "size":
-                    sdo_size = int(value)
-                    print(f"size 已修改为: {sdo_size}")
-                else:
-                    print("未知参数，可修改: slave_id/index/sub_index/size")
-            except ValueError:
-                print("输入无效，参数保持不变!")
-
-        elif user_input == "exit":
-            print("退出程序...")
-            break
-
-        else:
-            print("未知命令，请重新输入!")
+    for cmd in readsdo_cmds:
+        resp_json = send_readsdo_raw(client, cmd)
+        if isinstance(resp_json, list):
+            for r in resp_json:
+                print(f"[ReadSdo] subcmd_index: {r.get('subcmd_index')}")
+                print(f"[ReadSdo] return_code: {r.get('return_code')}")
+                print(f"[ReadSdo] return_message: {r.get('return_message')}")
+                if 'sdo_value' in r:
+                    # 兼容数字和 "0x..." 字符串两种返回形式
+                    try:
+                        v = int(r['sdo_value'], 0) if isinstance(r['sdo_value'], str) else int(r['sdo_value'])
+                        print(f"[ReadSdo] sdo_value: {v} (0x{v:X})")
+                    except (ValueError, TypeError):
+                        print(f"[ReadSdo] sdo_value: {r['sdo_value']}")
 
 
 # 程序入口

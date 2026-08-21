@@ -104,6 +104,19 @@ if has_rt_data():
 | `get_joint_velocity(m, j)` | `float` | 速度 |
 | `get_joint_target_position(m, j)` | `float` | 目标位置 |
 
+客户设备还提供模块级便捷函数 `get_model_gripper_state()`。它从同一个 RT 快照
+读取 `model1/joint0`，并返回米、毫米和 Topic 时间戳。该函数是对通用关节 RT
+数据的派生包装，不是新的底层 Topic 字段，也不同于 NRT 子系统中的外设夹爪接口。
+
+```python
+from system_state_reader import get_model_gripper_state
+
+model_gripper = get_model_gripper_state()
+if model_gripper is not None:
+    print(model_gripper["position_m"])
+    print(model_gripper["position_mm"])
+```
+
 ### 5.2 关节 NRT 限制
 
 | 函数 | 返回值 | 说明 |
@@ -184,3 +197,28 @@ if has_rt_data():
 
 - 直接获取方式：[`examples/topic_sub_direct.py`](examples/topic_sub_direct.py)
 - 快照方式：[`examples/topic_sub_snapshot.py`](examples/topic_sub_snapshot.py)
+
+## 12. model1 model 夹爪便捷接口
+
+`system_state_reader.py` 提供面向客户设备的 model 夹爪状态便捷接口。它只读取
+RT Topic 中的 `model1/joint0`，不包含机械臂关节角或末端位姿。`main.py` 已包含
+调用示例。
+
+```python
+from system_state_reader import get_model_gripper_state
+
+state = get_model_gripper_state()
+if state is not None:
+    print(state["position_m"])
+    print(state["position_mm"])
+    print(state["topic_timestamp"])
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `position_m` | `float` | model1 第 0 关节位置，单位 m |
+| `position_mm` | `float` | 同一位置换算为 mm |
+| `topic_timestamp` | `int` | Topic 消息头原始时间戳，单位由发布端定义 |
+
+订阅尚未收到 RT 数据时返回 `None`；缺少 model1 或其第 0 关节时抛出
+`RuntimeError`，用于尽早发现发布端模型配置不匹配。

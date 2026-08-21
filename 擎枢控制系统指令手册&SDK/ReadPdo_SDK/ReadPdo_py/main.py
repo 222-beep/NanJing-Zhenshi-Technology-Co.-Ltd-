@@ -16,22 +16,21 @@ init_cmds = [
     "{Enable}",
 ]
 
-# ReadPdo 指令参数（可在菜单中随时修改 slave_id/index/size）
+# ReadPdo 指令参数（可自行修改）
 # slave_id  : 从站编号
 # index     : PDO 对象索引（十六进制）
 # sub_index : PDO 对象子索引（十六进制）
 # size      : 读取数据位宽（bit）
 # interval  : 读取间隔（s）
 # loop      : 循环读取次数
-slave_id = 6
-pdo_index = 0x6041
-pdo_size = 16
+readpdo_cmds = [
+    "{ReadPdo --slave_id=6 --index=0x6041 --sub_index=0x00 --size=16 --interval=1 --loop=1}"
+]
 
-
-def build_readpdo_cmd() -> str:
-    """用当前参数拼接 ReadPdo 指令"""
-    return (f"{{ReadPdo --slave_id={slave_id} --index=0x{pdo_index:04X} --sub_index=0x00 "
-            f"--size={pdo_size} --interval=1 --loop=1}}")
+# 用户自定义指令列表
+your_cmds = [
+    # 添加你的指令
+]
 
 
 def send_readpdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
@@ -60,71 +59,32 @@ def send_readpdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
 
 
 def main():
-    """主函数 - ReadPdo 指令交互发送"""
-    global slave_id, pdo_index, pdo_size
+    """主函数"""
+    # 创建客户端
     client = RpcClient(ROBOT_IP)
 
     if not client.is_connected():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 发送初始化指令
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500, debug=True)
-    print("初始化完成")
+    # 示例 1：通用同步 RPC（最常见用法）
+    # ReadPdo 走原始 JSON 接口解析扩展返回值（pdo_value）
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500)
 
-    while True:
-        print("\n=== ReadPdo 指令菜单 ===")
-        print("readpdo  - 读取 PDO 数据  ")
-        print("set      - 修改参数(slave_id/index/size)")
-        print("exit     - 退出程序      ")
-        print(f"当前参数: slave_id={slave_id}  index=0x{pdo_index:04X}  size={pdo_size}")
-
-        user_input = input("请输入命令: ").strip()
-
-        if user_input == "readpdo":
-            # 用当前参数拼接 ReadPdo 指令，走原始 JSON 接口解析完整返回值
-            if not client.is_connected():
-                print(f"[SYNC] Connection lost! {client.error_info()}")
-            else:
-                resp_json = send_readpdo_raw(client, build_readpdo_cmd())
-                if isinstance(resp_json, list):
-                    for r in resp_json:
-                        print(f"[ReadPdo] subcmd_index: {r.get('subcmd_index')}")
-                        print(f"[ReadPdo] return_code: {r.get('return_code')}")
-                        print(f"[ReadPdo] return_message: {r.get('return_message')}")
-                        if 'pdo_value' in r:
-                            # 兼容数字和 "0x..." 字符串两种返回形式
-                            try:
-                                v = int(r['pdo_value'], 0) if isinstance(r['pdo_value'], str) else int(r['pdo_value'])
-                                print(f"[ReadPdo] pdo_value: {v} (0x{v:X})")
-                            except (ValueError, TypeError):
-                                print(f"[ReadPdo] pdo_value: {r['pdo_value']}")
-                print("[ReadPdo] 指令已发送")
-
-        elif user_input == "set":
-            param = input("请输入要修改的参数名 (slave_id/index/size): ").strip()
-            value = input("请输入新值（index 支持 0x 十六进制）: ").strip()
-            try:
-                if param == "slave_id":
-                    slave_id = int(value)
-                    print(f"slave_id 已修改为: {slave_id}")
-                elif param == "index":
-                    pdo_index = int(value, 0)
-                    print(f"index 已修改为: 0x{pdo_index:04X}")
-                elif param == "size":
-                    pdo_size = int(value)
-                    print(f"size 已修改为: {pdo_size}")
-                else:
-                    print("未知参数，可修改: slave_id/index/size")
-            except ValueError:
-                print("输入无效，参数保持不变!")
-
-        elif user_input == "exit":
-            print("退出程序...")
-            break
-
-        else:
-            print("未知命令，请重新输入!")
+    for cmd in readpdo_cmds:
+        resp_json = send_readpdo_raw(client, cmd)
+        if isinstance(resp_json, list):
+            for r in resp_json:
+                print(f"[ReadPdo] subcmd_index: {r.get('subcmd_index')}")
+                print(f"[ReadPdo] return_code: {r.get('return_code')}")
+                print(f"[ReadPdo] return_message: {r.get('return_message')}")
+                if 'pdo_value' in r:
+                    # 兼容数字和 "0x..." 字符串两种返回形式
+                    try:
+                        v = int(r['pdo_value'], 0) if isinstance(r['pdo_value'], str) else int(r['pdo_value'])
+                        print(f"[ReadPdo] pdo_value: {v} (0x{v:X})")
+                    except (ValueError, TypeError):
+                        print(f"[ReadPdo] pdo_value: {r['pdo_value']}")
 
 
 # 程序入口

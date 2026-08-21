@@ -1,66 +1,38 @@
-import math
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
-# 初始化指令列表
+# 初始化命令列表
 init_cmds = [
     "{Clear}",
     "{Disable}",
     "{Enable}",
 ]
 
+# MoveSeriesToppJ 关节轨迹命令：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
+# jointtarget 共 10 位，不足补 0，单位：弧度
+trajectory_cmds = [
+    "{MoveSeriesToppJ --type=first_insert}",
+    "{MoveSeriesToppJ --type=insert --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0}}",
+    "{MoveSeriesToppJ --type=insert --jointtarget_value={0.2,0,0.5,-0.2,0,0,0,0,0,0}}",
+    "{MoveSeriesToppJ --type=insert --jointtarget_value={0,0,0,0,0,0,0,0,0,0}}",
+    "{MoveSeriesToppJ --type=start --vel_coef=0.95 --acc_coef=0.95}",
+]
+
+# 停止命令
+stop_cmds = [
+    "{Stop --last_count=10}",
+]
+
+# 用户自定义指令列表
+your_cmds = [
+    # 添加你的指令
+]
+
 ROBOT_IP = "192.168.11.11"
 
-# 常量定义
-REQUIRED_DIM = 10        # 关节指令字符串需要的总维度
-USER_INPUT_AXIS = 6      # 用户输入的关节数
-MIN_SPEED_ACCEL = 0.1
-MAX_SPEED_ACCEL = 1.0
-
-
-def parse_joint_angles(input_str):
-    """解析关节角度字符串（度 -> 弧度），并补全到 REQUIRED_DIM 维度"""
-    angles_deg = []
-    for item in input_str.split(","):
-        item = item.strip()
-        if item == "":
-            continue
-        deg = float(item)
-        if deg < -360.0 or deg > 360.0:
-            raise ValueError(f"角度值超出合理范围: {deg}")
-        angles_deg.append(deg)
-
-    # 补全或截断到 USER_INPUT_AXIS
-    while len(angles_deg) < USER_INPUT_AXIS:
-        angles_deg.append(0.0)
-    angles_deg = angles_deg[:USER_INPUT_AXIS]
-
-    # 度转弧度
-    angles_rad = [d * math.pi / 180.0 for d in angles_deg]
-
-    # 补全到要求的维度
-    while len(angles_rad) < REQUIRED_DIM:
-        angles_rad.append(0.0)
-    return angles_rad
-
-
-def build_joint_string(angles):
-    """构建关节角度指令字符串 {a1,a2,...,a10}"""
-    return "{" + ",".join(f"{a:.5f}" for a in angles) + "}"
-
-
-def show_joint_angles(angles):
-    """显示关节角度（弧度 -> 度），仅展示前 USER_INPUT_AXIS 个"""
-    deg_list = [f"{a * 180.0 / math.pi:.1f}" for a in angles[:USER_INPUT_AXIS]]
-    return "[" + ", ".join(deg_list) + "]"
-
-
-def clamp(value, min_val, max_val):
-    return max(min_val, min(value, max_val))
-
-
 def main():
+    """主函数"""
     # 创建客户端
     client = RpcClient(ROBOT_IP)
 
@@ -68,117 +40,15 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 发送初始化指令
+    # 示例 1：通用同步 RPC（最常见用法）
+    # 可选参数: send_rpcsy(client, cmds, timeout_ms, sleep_s)
     send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
+    send_rpcsy(client, trajectory_cmds, timeout_ms=30000, sleep_s=0.5)
+    send_rpcsy(client, stop_cmds, timeout_ms=5000, sleep_s=1.0)
 
-    # 轨迹点列表：每项为 {"name": ..., "angles": [...]}（angles 为弧度）
-    trajectory_list = []
-    speed = 0.95
-    accel = 0.95
-
-    while True:
-        print("\n=====================================================")
-        print("          MoveSeriesToppJ 关节轨迹控制")
-        print("=====================================================")
-        print("1）设置轨迹起点（当前位置）")
-        print("2）添加关节轨迹点")
-        print(f"3）设置速度系数 [{MIN_SPEED_ACCEL}~{MAX_SPEED_ACCEL}]")
-        print(f"4）设置加速度系数 [{MIN_SPEED_ACCEL}~{MAX_SPEED_ACCEL}]")
-        print("5）执行轨迹运动")
-        print("6）清空所有轨迹点")
-        print("7）查看已添加轨迹点")
-        print("8）安全停止并退出")
-        print("=====================================================")
-        print(f"当前：速度：{speed:.2f}   加速度：{accel:.2f}")
-
-        user_input = input("选择（1-8）：").strip()
-        if user_input == "":
-            print("错误：请输入有效选项！")
-            continue
-
-        try:
-            if user_input == "1":
-                print("[操作] 设置轨迹起点...")
-                send_rpcsy(
-                    client,
-                    ["{MoveSeriesToppJ --type=first_insert}"],
-                    timeout_ms=5000, sleep_s=0.5,
-                )
-                trajectory_list = []
-                print("[成功] 轨迹起点已设置！")
-
-            elif user_input == "2":
-                angle_input = input("[操作] 输入6个关节角（逗号分隔，单位：度）：")
-                angles_rad = parse_joint_angles(angle_input)
-                joint_str = build_joint_string(angles_rad)
-
-                cmd = (
-                    "{MoveSeriesToppJ --type=insert "
-                    f"--jointtarget_value={joint_str}}}"
-                )
-                send_rpcsy(client, [cmd], timeout_ms=5000, sleep_s=0.5)
-
-                point_name = f"j{len(trajectory_list) + 1}"
-                trajectory_list.append({"name": point_name, "angles": angles_rad})
-                print(f"[成功] 已添加：{point_name} {show_joint_angles(angles_rad)}")
-
-            elif user_input == "3":
-                s = input(f"[操作] 输入速度系数({MIN_SPEED_ACCEL}~{MAX_SPEED_ACCEL})：")
-                speed = clamp(float(s), MIN_SPEED_ACCEL, MAX_SPEED_ACCEL)
-                print(f"[成功] 速度已设为：{speed:.2f}")
-
-            elif user_input == "4":
-                s = input(f"[操作] 输入加速度系数({MIN_SPEED_ACCEL}~{MAX_SPEED_ACCEL})：")
-                accel = clamp(float(s), MIN_SPEED_ACCEL, MAX_SPEED_ACCEL)
-                print(f"[成功] 加速度已设为：{accel:.2f}")
-
-            elif user_input == "5":
-                if len(trajectory_list) == 0:
-                    print("[错误] 请先添加轨迹点！")
-                    continue
-
-                print("[操作] 开始执行轨迹...")
-                cmd = (
-                    "{MoveSeriesToppJ --type=start "
-                    f"--vel_coef={speed:.5f} --acc_coef={accel:.5f}}}"
-                )
-                send_rpcsy(client, [cmd], timeout_ms=30000, sleep_s=1.0)
-                print("[成功] 轨迹执行完成！")
-
-            elif user_input == "6":
-                print("[操作] 清空轨迹点...")
-                send_rpcsy(
-                    client,
-                    ["{MoveSeriesToppJ --type=clear}"],
-                    timeout_ms=5000, sleep_s=0.5,
-                )
-                trajectory_list = []
-                print("[成功] 已清空所有轨迹点！")
-
-            elif user_input == "7":
-                print(f"[信息] 轨迹点总数：{len(trajectory_list)}")
-                if len(trajectory_list) == 0:
-                    print("  暂无轨迹点")
-                else:
-                    for i, p in enumerate(trajectory_list, start=1):
-                        print(f"  {i}. {p['name']}: {show_joint_angles(p['angles'])}")
-
-            elif user_input == "8":
-                print("[操作] 安全停止机器人...")
-                # 停止机器人运动
-                send_rpcsy(client, ["{Stop --last_count=10}"], timeout_ms=5000, sleep_s=1.0)
-                # 恢复伺服使能
-                send_rpcsy(client, ["{Start}"], timeout_ms=5000, sleep_s=1.0)
-                print("[成功] 程序安全退出！")
-                break
-
-            else:
-                print("[错误] 请输入 1~8 的数字！")
-
-        except ValueError as e:
-            print(f"[错误] {e}")
-        except Exception as e:
-            print(f"[错误] {e}")
+    # 示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    # 可选参数: send_rpc_async(client, cmds, timeout_ms, wait_s)
+    # send_rpc_async(client, trajectory_cmds, timeout_ms=30000, wait_s=0.5)
 
 
 # 程序入口

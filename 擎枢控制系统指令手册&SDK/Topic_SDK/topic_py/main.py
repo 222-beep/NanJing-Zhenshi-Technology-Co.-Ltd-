@@ -15,7 +15,7 @@ topic = get_topic_module()
 from system_state_reader import (
     has_rt_data, has_nrt_data,
     get_model_count_rt, get_model_name, get_model_type,
-    get_current_robottarget, get_current_jointtarget,
+    get_current_robottarget, get_current_jointtarget, get_model_gripper_state,
     get_subsystem_count, get_subsystem_name, get_subsystem_state,
     get_subsystem_data_size, parse_subsystem_data,
     get_interface_count, get_interface_name, get_interface_state,
@@ -23,7 +23,8 @@ from system_state_reader import (
 
 # ============================================================================
 # 用户自定义结构体格式 —— 用于解析子系统的 data 字段
-# 对应 C++ 中的 TwoFingerGripperYSStatus
+# 对应 C++ 中的 TwoFingerGripperYSStatus。
+# 这是通用 NRT 外设夹爪解析示例，与 model1/joint0 的 RT model 夹爪接口不同。
 # ============================================================================
 TWO_FINGER_GRIPPER_YS_FORMAT = '<d'    # TwoFingerGripperYSStatus: actual_pos (double, 8 bytes)
 
@@ -57,6 +58,13 @@ if __name__ == "__main__":
                     print(f"\n--- Model {m} : {get_model_name(m)} ({get_model_type(m)}) ---")
                     print(f"  robottarget : {get_current_robottarget(m)}")
                     print(f"  jointtarget : {get_current_jointtarget(m)}")
+
+                model_gripper = get_model_gripper_state()
+                if model_gripper is not None:
+                    print("\n--- Model Gripper (model1/joint0) ---")
+                    print(f"  position_m  : {model_gripper['position_m']}")
+                    print(f"  position_mm : {model_gripper['position_mm']}")
+                    print(f"  timestamp   : {model_gripper['topic_timestamp']}")
                 print("=============================================================================\n")
                 last_rt_time = now
 

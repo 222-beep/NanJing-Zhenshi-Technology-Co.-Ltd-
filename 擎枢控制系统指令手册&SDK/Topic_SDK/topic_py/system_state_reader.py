@@ -191,7 +191,7 @@ class SystemStateReader:
     def __init__(self, data: 'topic.SystemStateData', is_rt: bool = True):
         """
         :param data: SystemStateData 快照数据
-        :param is_rt: True 表示 RT 数据快照，False 表示 NRT 数据快照
+        :param is_rt: True 表示 RT 数据快照, False 表示 NRT 数据快照
         """
         self._data = data
         self._is_rt = is_rt
@@ -770,6 +770,27 @@ def get_joint_type(model_idx: int, joint_idx: int) -> str:
 def get_joint_position(model_idx: int, joint_idx: int) -> float:
     s = SystemStateReader.snapshot_rt()
     return s.joint_position(model_idx, joint_idx) if s else 0.0
+
+
+def get_model_gripper_state():
+    """返回 model1/joint0 的 model 夹爪位置；尚无 RT 数据时返回 None。"""
+    model_index = 1  # 如果夹爪model id发生变化，在此更改
+    joint_index = 0  # 夹爪只有一个关节，即J0
+
+    s = SystemStateReader.snapshot_rt()
+    if not s:
+        return None
+    if s.model_count() <= model_index:
+        raise RuntimeError("Topic RT data does not contain model1 model gripper")
+    if s.joint_count(model_index) <= joint_index:
+        raise RuntimeError("model1 does not contain joint0 model gripper state")
+
+    position_m = float(s.joint_position(model_index, joint_index))
+    return {
+        "position_m": position_m,
+        "position_mm": position_m * 1000.0,
+        "topic_timestamp": int(s.header_timestamp()),
+    }
 
 
 def get_joint_torque(model_idx: int, joint_idx: int) -> float:

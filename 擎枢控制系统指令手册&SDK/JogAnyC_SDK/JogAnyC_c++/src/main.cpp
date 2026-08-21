@@ -1,224 +1,90 @@
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include "rpc_client.h"
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <string>
-#include <sstream>
-#include <algorithm>
-#include <limits>
 
-using namespace std;
-
-// 笛卡尔目标点维数：x,y,z,q1,q2,q3,q4
-const int NUM_CARTESIAN = 7;
-
-// 字符串分割
-vector<string> split(const string& s, char delimiter) {
-    vector<string> tokens;
-    string token;
-    istringstream tokenStream(s);
-    while (getline(tokenStream, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
-
-// 轨迹点位：笛卡尔位姿 + 速度
-struct TrajectoryPoint {
-    string robottarget_value;
-    double speed;
-};
-
-// 拼接 JogAnyC 指令
-string build_jog_cmd(const string& robottarget_value, double speed) {
-    return "{JogAnyC --robottarget_value=" + robottarget_value +
-        " --cartesian_vel={" + std::to_string(speed) + "}" +
-        " --cartesian_acc={1.0} --cartesian_dec={1.0}}";
-}
+// ==================================================================
+//  main  ——  使用示例
+// ==================================================================
 
 int main() {
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
     const std::string robot_ip = "192.168.11.11";
 
-    string input;
+    // ---- 命令定义 --------------------------------------------------
 
-    // 初始化命令
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
         "{Enable}",
     };
 
-    // JogAnyC 初始动作
-    std::vector<std::string> jog_start_cmds = {
+    // JogAnyC 运动命令（robottarget 为笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
+    std::vector<std::string> jog_cmds = {
         "{JogAnyC --robottarget_value={0.6,0.1,0.64,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}"
     };
 
-    // 停止动作
-    std::vector<std::string> jog_stop_cmds = {
+    // 停止命令
+    std::vector<std::string> stop_cmds = {
         "{Stop --last_count=10}"
     };
 
-    // 轨迹点位列表（add 添加，run 按序执行）
-    vector<TrajectoryPoint> trajectory_points;
+    std::vector<std::string> your_cmds = {
+        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
 
-    // 连接
+        //add your cmds
+
+    };
+
+    // ---- 连接机器人控制器 -------------------------------------------
+
+    std::cout << "Connecting: " << std::endl;
     cpp_rpc::CPPClient client(robot_ip, 5868);
-
-    // 初始化
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
-
-    // 主循环
-    while (true) {
-        std::cout << "\n可用命令:\n";
-        std::cout << "start  - 启动 JogAnyC 控制\n";
-        std::cout << "stop   - 停止运动\n";
-        std::cout << "custom - 输入自定义笛卡尔目标点(立即执行)\n";
-        std::cout << "add    - 添加点位到轨迹列表\n";
-        std::cout << "show   - 显示轨迹点位列表\n";
-        std::cout << "clear  - 清空轨迹点位列表\n";
-        std::cout << "run    - 按序执行轨迹点位列表\n";
-        std::cout << "exit   - 退出程序\n";
-        std::cout << "请输入命令: ";
-
-        std::cin >> input;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
-
-        if (input == "start") {
-            std::cout << "启动 JogAnyC 控制...\n";
-            send_rpcsy<RespDemo>(client, jog_start_cmds, 1000, 5000);
-            std::cout << "机器人已执行初始动作\n";
-        }
-        else if (input == "stop") {
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
-            std::cout << "运动已停止\n";
-        }
-        else if (input == "custom") {
-            try {
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-                std::cout << "请输入" << NUM_CARTESIAN << "个笛卡尔位姿值(x,y,z,q1,q2,q3,q4，x,y,z单位:米)，用逗号分隔: ";
-                std::string cartesian_input;
-                std::getline(std::cin, cartesian_input);
-
-                vector<string> cartesian_str = split(cartesian_input, ',');
-                if (cartesian_str.size() != NUM_CARTESIAN) {
-                    std::cout << "错误: 需要输入" << NUM_CARTESIAN << "个笛卡尔位姿值!\n";
-                    continue;
-                }
-
-                std::string robottarget_value = "{";
-                for (size_t i = 0; i < cartesian_str.size(); ++i) {
-                    robottarget_value += cartesian_str[i];
-                    if (i < cartesian_str.size() - 1) {
-                        robottarget_value += ",";
-                    }
-                }
-                robottarget_value += "}";
-
-                std::cout << "请输入运动速度(默认1.0): ";
-                std::string speed_input;
-                std::getline(std::cin, speed_input);
-
-                double speed = 1.0;
-                if (!speed_input.empty()) {
-                    speed = stod(speed_input);
-                }
-
-                std::string custom_cmd = build_jog_cmd(robottarget_value, speed);
-
-                std::cout << "执行指令: " << custom_cmd << std::endl;
-
-                std::vector<std::string> custom_cmds = { custom_cmd };
-                send_rpcsy<RespDemo>(client, custom_cmds, 1000, 5000);
-            }
-            catch (const std::exception& e) {
-                std::cout << "输入格式错误，请确保输入的是数字\n";
-                std::cout << "错误信息: " << e.what() << std::endl;
-            }
-        }
-        else if (input == "add") {
-            try {
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-                std::cout << "请输入" << NUM_CARTESIAN << "个笛卡尔位姿值(x,y,z,q1,q2,q3,q4，x,y,z单位:米)，用逗号分隔: ";
-                std::string cartesian_input;
-                std::getline(std::cin, cartesian_input);
-
-                vector<string> cartesian_str = split(cartesian_input, ',');
-                if (cartesian_str.size() != NUM_CARTESIAN) {
-                    std::cout << "错误: 需要输入" << NUM_CARTESIAN << "个笛卡尔位姿值!\n";
-                    continue;
-                }
-
-                std::string robottarget_value = "{";
-                for (size_t i = 0; i < cartesian_str.size(); ++i) {
-                    robottarget_value += cartesian_str[i];
-                    if (i < cartesian_str.size() - 1) {
-                        robottarget_value += ",";
-                    }
-                }
-                robottarget_value += "}";
-
-                std::cout << "请输入运动速度(默认1.0): ";
-                std::string speed_input;
-                std::getline(std::cin, speed_input);
-
-                double speed = 1.0;
-                if (!speed_input.empty()) {
-                    speed = stod(speed_input);
-                }
-
-                trajectory_points.push_back({ robottarget_value, speed });
-                std::cout << "点位 " << trajectory_points.size() << " 已添加，当前共 "
-                          << trajectory_points.size() << " 个点位\n";
-            }
-            catch (const std::exception& e) {
-                std::cout << "输入格式错误，请确保输入的是数字\n";
-                std::cout << "错误信息: " << e.what() << std::endl;
-            }
-        }
-        else if (input == "show") {
-            std::cout << "当前轨迹点位数量: " << trajectory_points.size() << "\n";
-            for (size_t i = 0; i < trajectory_points.size(); ++i) {
-                std::cout << "  " << i + 1 << ". " << trajectory_points[i].robottarget_value
-                          << ", speed=" << trajectory_points[i].speed << "\n";
-            }
-        }
-        else if (input == "clear") {
-            trajectory_points.clear();
-            std::cout << "轨迹点位列表已清空\n";
-        }
-        else if (input == "run") {
-            if (trajectory_points.empty()) {
-                std::cout << "错误: 没有轨迹点可执行! 请先用 add 添加点位\n";
-                continue;
-            }
-
-            std::cout << "开始执行轨迹，共 " << trajectory_points.size() << " 个点位...\n";
-            for (size_t i = 0; i < trajectory_points.size(); ++i) {
-                const auto& point = trajectory_points[i];
-                std::string cmd = build_jog_cmd(point.robottarget_value, point.speed);
-                std::cout << "[" << i + 1 << "/" << trajectory_points.size() << "] " << cmd << std::endl;
-                std::vector<std::string> cmds = { cmd };
-                // 同步发送，等待到达当前点后再发下一个点
-                send_rpcsy<RespDemo>(client, cmds, 500, 30000);
-            }
-            std::cout << "轨迹执行完成!\n";
-        }
-        else if (input == "exit") {
-            std::cout << "退出程序...\n";
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
-            break;
-        }
-        else {
-            std::cout << "未知命令，请重新输入!\n";
-        }
+    if (!client.IsConnected()) {
+        std::cerr << "Connection failed! Aborting all commands." << std::endl;
+        return -1;
     }
+    std::cout << "Connected: " << std::endl;
+
+    // ==================================================================
+    //  示例 1：通用同步 RPC（最常见用法）
+    //  返回值只有 return_code / subcmd_index / return_message
+    // ==================================================================
+    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
+    send_rpcsy<RespDemo>(client, jog_cmds, 1000, 5000);
+    send_rpcsy<RespDemo>(client, stop_cmds, 1000, 5000);
+
+    // ==================================================================
+    //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    // ==================================================================
+    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
+    // send_rpcAsy(client, jog_cmds, 1000, 5000);
+    // send_rpcAsy(client, stop_cmds, 1000, 5000);
+
+    // // ==================================================================
+    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
+    // //  当某个指令返回了额外的字段时，使用专用的响应类型
+    // // ==================================================================
+    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
+    // core::Msg req(your_cmds[0]);
+    // req.setMsgID(10001);
+    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
+    //
+    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
+    // if (results.first == 0 && !results.second.empty()) {
+    //     std::vector<double>& pq = results.second[0].target_pq;
+    //     char buf[512];
+    //     snprintf(buf, sizeof(buf),
+    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
+    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
+    //     std::vector<std::string> blend_cmds = {
+    //         "{MoveBlend --type=first_insert}",
+    //         buf,
+    //         "{MoveBlend --type=start}"
+    //     };
+    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
+    // }
 
     return 0;
 }

@@ -95,6 +95,21 @@ if has_rt_data():
     pos = get_joint_position(0, 2)         # 模型0, 关节2 的位置
 ```
 
+客户设备的 RT 数据中，`model1/joint0` 为 model 夹爪。Python 便捷接口会同时
+返回米、毫米和 Topic 时间戳：
+
+```python
+from system_state_reader import get_model_gripper_state
+
+model_gripper = get_model_gripper_state()
+if model_gripper is not None:
+    print(model_gripper["position_m"])
+    print(model_gripper["position_mm"])
+```
+
+该接口读取的是 RT model 关节数据，与 NRT 子系统中的 `TwoFingerGripperYS`
+外设夹爪接口不同。完整字段说明见 `topic_py/API.md`。
+
 > 运行前请将示例代码中的 IP 修改为实际发布者（控制器）地址。
 
 完整字段列表、返回值类型和参数约定见 [`topic_c++/API.md`](topic_c++/API.md)。

@@ -2,25 +2,30 @@ import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
 
-# 机器人关节轴数，按实际机型修改（例如 6、7），这里默认7轴
-NUM_JOINTS = 7
-
-# jointtarget_value 补零个数：总保持 10 位（6 轴补 4 个 0，7 轴补 3 个 0）
-PAD_ZEROS = 10 - NUM_JOINTS
-
 # 初始化命令列表
 init_cmds = [
     "{Clear}",
+    "{Disable}",
+    "{Enable}",
 ]
 
-# JogAnyJ 启动指令 - 设置初始位置（jointtarget_value 固定 10 位：NUM_JOINTS 个关节 + 补 0）
-Jog_start = [
-    f"{{JogAnyJ --jointtarget_value={{{','.join(['0'] * (NUM_JOINTS + PAD_ZEROS))}}} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}}"
+# JogAnyJ 运动命令（jointtarget 共 10 位，不足补 0，单位：弧度）
+jog_cmds = [
+    "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={0.2,0,0.5,-0.2,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={-0.1,0.3,0,-0.4,0.2,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
 ]
 
-# JogAnyJ 停止指令
-Jog_stop = [
+# 停止命令
+stop_cmds = [
     "{Stop --last_count=10}",
+]
+
+# 用户自定义指令列表
+your_cmds = [
+    # 添加你的指令
 ]
 
 ROBOT_IP = "192.168.11.11"
@@ -33,59 +38,18 @@ def main():
     if not client.is_connected():
         print(f"Connection failed: {client.error_info()}")
         return
-    
-    # 发送初始化指令
-    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
-    
-    # 主循环 - 等待用户输入控制JogAnyJ
-    while True:
-        print("\n可用命令:")
-        print("start - 启动JogAnyJ控制")
-        print("stop - 停止运动")
-        print("custom - 输入自定义关节位置")
-        print("exit - 退出程序")
-        
-        user_input = input("请输入命令: ").strip().lower()
-        
-        if user_input == "start":
-            print("启动JogAnyJ控制!")
-            send_rpcsy(client, Jog_start, timeout_ms=5000, sleep_s=1.0)
-            print("机器人已移动到初始位置")
-            
-        elif user_input == "stop":
-            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)
-            print("运动已停止!")
-            
-        elif user_input == "custom":
-            try:
-                # 获取用户输入的关节位置
-                joint_input = input(f"请输入{NUM_JOINTS}个关节角度(弧度)，用逗号分隔: ")
-                joints = [float(x.strip()) for x in joint_input.split(",")]
-                
-                if len(joints) != NUM_JOINTS:
-                    print(f"错误: 需要输入{NUM_JOINTS}个关节角度!")
-                    continue
-                    
-                # 获取速度参数
-                speed = float(input("请输入运动速度(默认0.1): ") or "0.1")
-                
-                # 构建自定义指令（关节位置补 0 凑齐 10 位：6 轴补 4，7 轴补 3）
-                custom_cmd = f"{{JogAnyJ --jointtarget_value={{{','.join(map(str, joints))},{','.join(['0'] * PAD_ZEROS)}}} --joint_vel={speed} --joint_acc={0.5} --joint_dec={0.5} --last_count=100}}"
-                print(f"执行指令: {custom_cmd}")
-                send_rpcsy(client, [custom_cmd], timeout_ms=5000, sleep_s=1.0)
-                
-            except ValueError:
-                print("输入格式错误! 请确保输入的是数字。")
-            except Exception as e:
-                print(f"发生错误: {e}")
-                
-        elif user_input == "exit":
-            print("退出程序...")
-            send_rpcsy(client, Jog_stop, timeout_ms=5000, sleep_s=1.0)  # 确保停止运动
-            break
-            
-        else:
-            print("未知命令，请重新输入!")
+
+    # 示例 1：通用同步 RPC（最常见用法）
+    # 可选参数: send_rpcsy(client, cmds, timeout_ms, sleep_s)
+    send_rpcsy(client, init_cmds, timeout_ms=5000, sleep_s=0.1)
+    send_rpcsy(client, jog_cmds, timeout_ms=5000, sleep_s=1.0)
+    send_rpcsy(client, stop_cmds, timeout_ms=5000, sleep_s=1.0)
+
+    # 示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    # 可选参数: send_rpc_async(client, cmds, timeout_ms, wait_s)
+    # send_rpc_async(client, jog_cmds, timeout_ms=5000, wait_s=1.0)
+    # send_rpc_async(client, stop_cmds, timeout_ms=5000, wait_s=1.0)
+
 
 # 程序入口
 if __name__ == "__main__":

@@ -1,158 +1,87 @@
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
 #include "rpc_client.h"
+#include <cstdio>
 #include <iostream>
 #include <vector>
 #include <string>
-#include <sstream>
-#include <algorithm>
-#include <limits>
 
-using namespace std;
-
-// 机器人关节轴数，按实际机型修改，例如 6、7
-const int NUM_JOINTS = 7;
-
-// 生成 {0,0,...,0} 格式字符串，总保持 10 位（num_joints 个关节 + 补 0：6 轴补 4，7 轴补 3）
-std::string make_zero_joint_pos(int num_joints) {
-    std::string result = "{";
-    int total = std::max(num_joints, 10);
-    for (int i = 0; i < total; ++i) {
-        result += "0";
-        if (i < total - 1) {
-            result += ",";
-        }
-    }
-    result += "}";
-    return result;
-}
-
-// 字符串分割
-vector<string> split(const string& s, char delimiter) {
-    vector<string> tokens;
-    string token;
-    istringstream tokenStream(s);
-    while (getline(tokenStream, token, delimiter)) {
-        tokens.push_back(token);
-    }
-    return tokens;
-}
+// ==================================================================
+//  main  ——  使用示例
+// ==================================================================
 
 int main() {
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
     const std::string robot_ip = "192.168.11.11";
 
-    string input;
+    // ---- 命令定义 --------------------------------------------------
 
-    // 初始化命令
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
         "{Enable}",
     };
 
-    // 根据轴数自动生成初始 joint_pos
-    std::string zero_joint_pos = make_zero_joint_pos(NUM_JOINTS);
-
-    // JogAnyJ 初始动作
-    std::vector<std::string> jog_start_cmds = {
-        "{JogAnyJ --jointtarget_value=" + zero_joint_pos + " --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
+    // JogAnyJ 运动命令（jointtarget 共 10 位，不足补 0，单位：弧度）
+    std::vector<std::string> jog_cmds = {
+        "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={0.2,0,0.5,-0.2,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={-0.1,0.3,0,-0.4,0.2,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
     };
 
-    // 停止动作
-    std::vector<std::string> jog_stop_cmds = {
+    // 停止命令
+    std::vector<std::string> stop_cmds = {
         "{Stop --last_count=10}"
     };
 
-    // 连接
+    // ---- 连接机器人控制器 -------------------------------------------
+
+    std::cout << "Connecting: " << std::endl;
     cpp_rpc::CPPClient client(robot_ip, 5868);
-
-    // 初始化
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
-
-    // 主循环
-    while (true) {
-        std::cout << "\n可用命令:\n";
-        std::cout << "start  - 启动 JogAnyJ 控制\n";
-        std::cout << "stop   - 停止运动\n";
-        std::cout << "custom - 输入自定义关节位置\n";
-        std::cout << "exit   - 退出程序\n";
-        std::cout << "请输入命令: ";
-
-        std::cin >> input;
-        std::transform(input.begin(), input.end(), input.begin(), ::tolower);
-
-        if (input == "start") {
-            std::cout << "启动 JogAnyJ 控制...\n";
-            send_rpcsy<RespDemo>(client, jog_start_cmds, 1000, 5000);
-            std::cout << "机器人已执行初始动作\n";
-        }
-        else if (input == "stop") {
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
-            std::cout << "运动已停止\n";
-        }
-        else if (input == "custom") {
-            try {
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-                std::cout << "请输入" << NUM_JOINTS << "个关节角度(弧度)，用逗号分隔: ";
-                std::string joint_input;
-                std::getline(std::cin, joint_input);
-
-                vector<string> joints_str = split(joint_input, ',');
-                if (joints_str.size() != NUM_JOINTS) {
-                    std::cout << "错误: 需要输入" << NUM_JOINTS << "个关节角度!\n";
-                    continue;
-                }
-
-                std::string joint_pos = "{";
-                for (size_t i = 0; i < joints_str.size(); ++i) {
-                    joint_pos += joints_str[i];
-                    joint_pos += ",";
-                }
-                // 补 0 凑齐 10 位（6 轴补 4，7 轴补 3）
-                const int pad = 10 - NUM_JOINTS;
-                for (int i = 0; i < pad; ++i) {
-                    joint_pos += "0";
-                    joint_pos += (i == pad - 1) ? "}" : ",";
-                }
-
-                std::cout << "请输入运动速度(默认0.1): ";
-                std::string speed_input;
-                std::getline(std::cin, speed_input);
-
-                double speed = 0.1;
-                if (!speed_input.empty()) {
-                    speed = stod(speed_input);
-                }
-
-                std::string custom_cmd =
-                    "{JogAnyJ --jointtarget_value=" + joint_pos +
-                    " --joint_vel=" + std::to_string(speed) +
-                    " --joint_acc=0.5 --joint_dec=0.5 --last_count=100}";
-
-                std::cout << "执行指令: " << custom_cmd << std::endl;
-
-                std::vector<std::string> custom_cmds = { custom_cmd };
-                send_rpcsy<RespDemo>(client, custom_cmds, 1000, 5000);
-            }
-            catch (const std::exception& e) {
-                std::cout << "输入格式错误，请确保输入的是数字\n";
-                std::cout << "错误信息: " << e.what() << std::endl;
-            }
-        }
-        else if (input == "exit") {
-            std::cout << "退出程序...\n";
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 1000, 5000);
-            break;
-        }
-        else {
-            std::cout << "未知命令，请重新输入!\n";
-        }
+    if (!client.IsConnected()) {
+        std::cerr << "Connection failed! Aborting all commands." << std::endl;
+        return -1;
     }
+    std::cout << "Connected: " << std::endl;
+
+    // ==================================================================
+    //  示例 1：通用同步 RPC（最常见用法）
+    //  返回值只有 return_code / subcmd_index / return_message
+    // ==================================================================
+    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
+    send_rpcsy<RespDemo>(client, jog_cmds, 1000, 5000);
+    send_rpcsy<RespDemo>(client, stop_cmds, 1000, 5000);
+
+    // ==================================================================
+    //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    // ==================================================================
+    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
+    // send_rpcAsy(client, jog_cmds, 1000, 5000);
+    // send_rpcAsy(client, stop_cmds, 1000, 5000);
+
+    // // ==================================================================
+    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
+    // //  当某个指令返回了额外的字段时，使用专用的响应类型
+    // // ==================================================================
+    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
+    // core::Msg req("{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}");
+    // req.setMsgID(10001);
+    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
+    //
+    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
+    // if (results.first == 0 && !results.second.empty()) {
+    //     std::vector<double>& pq = results.second[0].target_pq;
+    //     char buf[512];
+    //     snprintf(buf, sizeof(buf),
+    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
+    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
+    //     std::vector<std::string> blend_cmds = {
+    //         "{MoveBlend --type=first_insert}",
+    //         buf,
+    //         "{MoveBlend --type=start}"
+    //     };
+    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
+    // }
 
     return 0;
 }
