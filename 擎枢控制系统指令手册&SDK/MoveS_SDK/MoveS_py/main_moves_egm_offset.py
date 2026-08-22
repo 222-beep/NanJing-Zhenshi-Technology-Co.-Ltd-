@@ -21,6 +21,8 @@ init_cmds = [
     "{Var --type=robottarget --name=p3 --value={0.44,-0.32,0.48,0,1,0,0}}",
     "{Var --type=robottarget --name=p4 --value={0.38,-0.38,0.44,0,1,0,0}}",
     "{Var --type=robottarget --name=p5 --value={0.32,-0.32,0.48,0,1,0,0}}",
+    # 开启最优求解器（需在 MoveS 发送之前）
+    "{SetUsingSP --state=on}",
 ]
 
 # MoveS 轨迹命令（同步发送）：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行

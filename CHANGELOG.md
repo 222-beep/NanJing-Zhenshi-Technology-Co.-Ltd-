@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-08-22
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- 源仓库内容更新（无新提交记录）
+
 ## 2026-08-21
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -149,5 +155,6 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
