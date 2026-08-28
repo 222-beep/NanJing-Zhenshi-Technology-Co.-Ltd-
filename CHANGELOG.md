@@ -6,6 +6,12 @@
 
 ## 2026-08-28
 
+### 同步 Gitee 更新（指令手册&SDK）
+
+- 同步 擎枢控制系统指令手册&SDK 目录至 Gitee 最新（变更文件 5 个）
+
+## 2026-08-28
+
 ### 更新擎枢控制系统最小上位机例程（基础 SDK 改为文件夹形式并更新）
 
 - **删除** `Base_SDK_c++.zip`、`Base_SDK_py.zip`，改以 `Base_SDK_c++/`、`Base_SDK_py/` 文件夹形式直接提供基础 SDK 源码
@@ -162,4 +168,5 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 

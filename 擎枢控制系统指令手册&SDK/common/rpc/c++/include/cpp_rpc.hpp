@@ -305,6 +305,66 @@ namespace cpp_rpc
     };
     NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(CommResp, return_code, subcmd_index, return_message)
 
+    constexpr int REALTIME_DEFAULT_PORT = 5900;
+    constexpr int REALTIME_DEFAULT_SEND_TIMEOUT_MS = 100;
+    constexpr std::size_t REALTIME_ARM_COUNT = 5;
+    constexpr std::size_t REALTIME_JOINT_COUNT = 10;
+
+    struct FastJointTargetParam
+    {
+        double joint_target_pos[REALTIME_ARM_COUNT][REALTIME_JOINT_COUNT]{};
+    };
+
+    static_assert(sizeof(FastJointTargetParam) == 400,
+                  "Unexpected FastJointTargetParam layout");
+
+    enum class RealtimeSendResult
+    {
+        Ok = 0,
+        NotConnected = -1,
+        SendFailed = -2,
+        TimedOut = -3
+    };
+
+    class CPPClient;
+
+    /**
+     * @description: 5900 实时关节目标发送通道。
+     * 每次 Send() 只发送一帧，调用方负责控制发送周期。
+     * 单帧未在发送超时内完整写入时连接会关闭，调用方需要重新 Connect()。
+     */
+    class CPP_RPC_EXPORT RealtimeChannel
+    {
+    public:
+        explicit RealtimeChannel(
+            std::string ip,
+            int port = REALTIME_DEFAULT_PORT,
+            int connect_timeout_ms = 2000,
+            int send_buffer_size = 0,
+            int send_timeout_ms = REALTIME_DEFAULT_SEND_TIMEOUT_MS);
+        ~RealtimeChannel();
+
+        RealtimeChannel(const RealtimeChannel &) = delete;
+        RealtimeChannel &operator=(const RealtimeChannel &) = delete;
+
+        bool Connect();
+        void Close();
+        bool IsConnected();
+        RealtimeSendResult Send(const FastJointTargetParam &target);
+        std::string LastError() const;
+
+    private:
+        std::string ip_;
+        int port_;
+        int connect_timeout_ms_;
+        int send_buffer_size_;
+        int send_timeout_ms_;
+        std::unique_ptr<CPPClient> client_;
+        std::atomic<std::int64_t> sequence_{1};
+        mutable std::mutex mutex_;
+        std::string last_error_;
+    };
+
     // 客户端类
     class CPP_RPC_EXPORT CPPClient
     {
@@ -853,6 +913,8 @@ namespace cpp_rpc
         }
 
     private:
+        friend class RealtimeChannel;
+
         // Process-lifetime executor: callbacks must never run on a worker owned
         // by CPPClient, otherwise a callback releasing the final client
         // reference would make CPPClient join its own worker thread.
