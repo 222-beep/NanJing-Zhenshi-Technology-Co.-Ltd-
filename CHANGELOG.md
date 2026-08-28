@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-08-28
+
+### 更新擎枢控制系统最小上位机例程（基础 SDK 改为文件夹形式并更新）
+
+- **删除** `Base_SDK_c++.zip`、`Base_SDK_py.zip`，改以 `Base_SDK_c++/`、`Base_SDK_py/` 文件夹形式直接提供基础 SDK 源码
+- **更新** 基础 SDK 至 Gitee 最新版（更新随附 RPC 与 Topic SDK 依赖）：
+  - `robot_state` Topic 依赖库按架构/CPython ABI 重新分类（`linux/{arm,x86}/`、Python 扩展归入 `cp310/`），移除 `20.04/22.04` 版本化目录，`libprotobuf.so.32`/`libzmq.so.5` 等同步更新，新增平台说明 `README.md`
+  - `overall_system_nrtstate.proto` 新增 `matrix_variables`、`drag_in_cst_coef`、`inf_rngs` 字段并重新生成 pb 文件；C++ 新增 `proto_generated/` 预生成兜底文件，`main.cpp` 小幅适配（`76763b3`）
+  - Python：`platform_loader.py` 更新平台检测与动态库加载，`system_state_reader.py` 增强系统状态读取，`main.py`、`readme.txt` 更新（`4f18a3c`）
+- **更新** 根目录 `README.md`，同步资源形式（压缩包 → 文件夹）
+
+---
+
 ## 2026-08-26
 
 ### 同步 Gitee 更新（指令手册&SDK）
