@@ -19,7 +19,7 @@
   - `robot_state` Topic 依赖库按架构/CPython ABI 重新分类（`linux/{arm,x86}/`、Python 扩展归入 `cp310/`），移除 `20.04/22.04` 版本化目录，`libprotobuf.so.32`/`libzmq.so.5` 等同步更新，新增平台说明 `README.md`
   - `overall_system_nrtstate.proto` 新增 `matrix_variables`、`drag_in_cst_coef`、`inf_rngs` 字段并重新生成 pb 文件；C++ 新增 `proto_generated/` 预生成兜底文件，`main.cpp` 小幅适配（`76763b3`）
   - Python：`platform_loader.py` 更新平台检测与动态库加载，`system_state_reader.py` 增强系统状态读取，`main.py`、`readme.txt` 更新（`4f18a3c`）
-- **更新** 根目录 `README.md`，同步资源形式（压缩包 → 文件夹）
+- **更新** 根目录 `README.md`，同步资源形式（压缩包 → 文件夹），并在开头补充 Gitee SDK 源码组织地址及说明
 
 ---
 

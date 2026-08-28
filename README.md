@@ -2,6 +2,8 @@
 
 擎枢控制系统是南京贞实科技有限公司开发的机器人控制系统，本仓库包含配套的**使用文档**、**指令手册与 SDK** 以及**最小上位机例程**。
 
+> **SDK 源码（Gitee）**：[https://gitee.com/zhenshi-controller-api-data](https://gitee.com/zhenshi-controller-api-data) —— 本仓库的 SDK 示例、公共库与最小上位机例程均源自该 Gitee 组织（`hello_-demo_-example`、`sdk_send_recevice_demo_c`、`sdk_send_recevice_demo_py`、`ros1_sdk` 等），并保持同步更新。
+
 ---
 
 ## 仓库结构
