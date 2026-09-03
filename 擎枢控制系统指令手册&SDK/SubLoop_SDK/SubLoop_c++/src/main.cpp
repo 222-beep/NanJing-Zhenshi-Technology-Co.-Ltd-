@@ -9,13 +9,10 @@ using namespace std;
 vector<string> init_cmds = {
     "{Clear}",
     "{Disable}",
-    "{Mode}",
-    "{SetMaxToq}",
     "{Recover}",
-    "{SetRate}",
     "{Enable}",
     "{Var --clear}",
-    "{Recover}",
+    "{Start}",
 };
 
 int main() {
@@ -26,7 +23,7 @@ int main() {
     cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // 发送初始化指令
-    // send_rpcsy<RespDemo>(client, init_cmds, 1000, 500);
+    // send_rpcsy<RespDemo>(client, init_cmds, 1000, 50000);
 
     // 第一条SubLoop指令
     vector<string> first_subloop_cmds = {

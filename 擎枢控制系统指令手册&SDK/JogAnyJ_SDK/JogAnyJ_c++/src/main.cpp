@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <future>
 
 // ==================================================================
 //  main  ——  使用示例
@@ -17,20 +18,16 @@ int main() {
         "{Clear}",
         "{Disable}",
         "{Enable}",
+        "{Start}"
     };
 
-    // JogAnyJ 运动命令（jointtarget 共 10 位，不足补 0，单位：弧度）
-    std::vector<std::string> jog_cmds = {
-        "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
-        "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
-        "{JogAnyJ --jointtarget_value={0.2,0,0.5,-0.2,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
-        "{JogAnyJ --jointtarget_value={-0.1,0.3,0,-0.4,0.2,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
-        "{JogAnyJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
-    };
-
-    // 停止命令
-    std::vector<std::string> stop_cmds = {
-        "{Stop --last_count=10}"
+    std::vector<std::string> joganyj_cmd = {
+    //    "{JogAnyJ --jointtarget_value={ 关节目标，共 10 位，不足补 0，单位：弧度 }
+    //               --joint_vel=（关节速度）
+    //               --joint_acc=（关节加速度）
+    //               --joint_dec=（关节减速度）
+    //               --last_count=（末尾保持周期数）}"
+        "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -46,42 +43,24 @@ int main() {
     // ==================================================================
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
+    //  执行初始化
     // ==================================================================
-    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
-    send_rpcsy<RespDemo>(client, jog_cmds, 1000, 5000);
-    send_rpcsy<RespDemo>(client, stop_cmds, 1000, 5000);
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    //  for 循环持续发送 JogAnyJ 保持点动
     // ==================================================================
-    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
-    // send_rpcAsy(client, jog_cmds, 1000, 5000);
-    // send_rpcAsy(client, stop_cmds, 1000, 5000);
+    //  send_rpcAsy(client, joganyj_cmd, 间隔ms, 超时ms)
 
-    // // ==================================================================
-    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
-    // //  当某个指令返回了额外的字段时，使用专用的响应类型
-    // // ==================================================================
-    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
-    // core::Msg req("{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}");
-    // req.setMsgID(10001);
-    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
-    //
-    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
-    // if (results.first == 0 && !results.second.empty()) {
-    //     std::vector<double>& pq = results.second[0].target_pq;
-    //     char buf[512];
-    //     snprintf(buf, sizeof(buf),
-    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
-    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
-    //     std::vector<std::string> blend_cmds = {
-    //         "{MoveBlend --type=first_insert}",
-    //         buf,
-    //         "{MoveBlend --type=start}"
-    //     };
-    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
-    // }
+    //持续发送 10 条指令
+    for(int i = 0; i < 10; ++i)
+    {
+        send_rpcAsy(client, joganyj_cmd, 0, 10000);
+        delay_ms(200);
+    }
 
     return 0;
 }

@@ -142,11 +142,12 @@ def sine_motion_loop(client):
 def main():
     global running
 
-    # 初始化命令：清除错误 → 去使能 → 使能
+    # 初始化命令：清除错误 → 去使能 → 使能 → 启动
     init_cmds = [
         "{Clear}",
         "{Disable}",
         "{Enable}",
+        "{Start}",
     ]
 
     # 全零初始关节位置
@@ -169,8 +170,8 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 执行初始化命令序列（Clear → Disable → Enable）
-    send_rpcsy(client, init_cmds, timeout_ms=5000, sleep_s=0.1)
+    # 执行初始化命令序列（Clear → Disable → Enable → Start）
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
 
     # 主循环
     while True:
@@ -195,7 +196,7 @@ def main():
         elif user_input == "stop":
             running = False
             time.sleep(0.1)
-            send_rpcsy(client, jog_stop_cmds, timeout_ms=5000, sleep_s=0.1)
+            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1, timeout_ms=50000)
             print("运动已停止")
 
         elif user_input == "custom":
@@ -218,7 +219,7 @@ def main():
                 custom_cmd = make_jog_cmd(joint_pos, START_ACC, START_DEC, START_VEL, START_LAST_COUNT)
                 print(f"执行指令: {custom_cmd}")
 
-                send_rpcsy(client, [custom_cmd], timeout_ms=5000, sleep_s=0.1)
+                send_rpcsy(client, [custom_cmd], sleep_s=0.1, timeout_ms=50000)
 
             except ValueError:
                 print("输入格式错误，请确保输入的是数字")
@@ -229,7 +230,7 @@ def main():
             print("退出程序...")
             running = False
             time.sleep(0.1)
-            send_rpcsy(client, jog_stop_cmds, timeout_ms=5000, sleep_s=0.1)
+            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1, timeout_ms=50000)
             break
 
         else:

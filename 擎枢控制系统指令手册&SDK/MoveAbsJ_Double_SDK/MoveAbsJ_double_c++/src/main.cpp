@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <future>
 
 // ==================================================================
 //  main  ——  使用示例
@@ -16,52 +17,29 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{Mode}",
-        "{SetMaxToq}",
         "{Recover}",
-        "{SetRate}",
         "{Enable}",
         "{Var --clear}",
-        "{Recover}",
-        // 定义机械臂1的关节目标变量
+    //    "{Var --type=jointtarget --name=（变量名）
+    //                  --value={ jointtarget 共 10 位，不足补 0，单位：弧度 }}"
+        // 机械臂 1 关节目标变量
         "{Var --type=jointtarget --name=j0 --value={0,0,0,0,0,0,0,0,0,0}}",
         "{Var --type=jointtarget --name=j1 --value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
         "{Var --type=jointtarget --name=j2 --value={0.2,0,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j3 --value={-0.1,0,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j4 --value={-0.2,0,0,0,0,0,0,0,0,0}}",
-        // 定义机械臂2的关节目标变量
+        // 机械臂 2 关节目标变量
         "{Var --type=jointtarget --name=j11 --value={0,0,0,0,0,0,0,0,0,0}}",
         "{Var --type=jointtarget --name=j21 --value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
         "{Var --type=jointtarget --name=j22 --value={0.2,0,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j23 --value={-0.1,0,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j24 --value={-0.2,0,0,0,0,0,0,0,0,0}}"
+        "{Start}"
     };
 
-    // 双臂运动指令列表 - 使用||分隔两个机械臂的指令
-    std::vector<std::string> motion_cmds = {
-        // 双臂同时运动到初始位置
-        "{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}",
-        // 双臂同时运动到不同位置
+    // 双臂 MoveAbsJ 指令使用 || 分隔左右臂
+    std::vector<std::string> moveabsj_cmd = {
+    //    "{MoveAbsJ --jointtarget_var=（左臂关节目标变量名）
+    //     ||MoveAbsJ --jointtarget_var=（右臂关节目标变量名）}"
         "{MoveAbsJ --jointtarget_var=j1||MoveAbsJ --jointtarget_var=j21}",
         "{MoveAbsJ --jointtarget_var=j2||MoveAbsJ --jointtarget_var=j22}",
-        "{MoveAbsJ --jointtarget_var=j3||MoveAbsJ --jointtarget_var=j23}",
-        "{MoveAbsJ --jointtarget_var=j4||MoveAbsJ --jointtarget_var=j24}"
-    };
-
-    // 双臂在线规划指令
-    std::vector<std::string> motion_speedL_cmds = {
-        // 双臂同时进行在线规划运动
-        "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000||SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000}",
-        "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000||SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000}",
-        "{Stop||Stop}",
-        "{Start||Start}",
-    };
-
-    std::vector<std::string> your_cmds = {
-        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
-
-        //add your cmds
-
+        "{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -77,39 +55,25 @@ int main() {
     // ==================================================================
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
+    //  执行初始化
     // ==================================================================
-    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    //  for 循环持续发送双臂 MoveAbsJ
+    //  依次运动到 (j1,j21) -> (j2,j22) -> (j0,j11)
     // ==================================================================
-    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
-    // send_rpcAsy(client, motion_speedL_cmds, 500, 10000);
+    //  send_rpcAsy(client, moveabsj_cmd, 间隔ms, 超时ms)
 
-    // // ==================================================================
-    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
-    // //  当某个指令返回了额外的字段时，使用专用的响应类型
-    // // ==================================================================
-    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
-    // core::Msg req(your_cmds[0]);
-    // req.setMsgID(10001);
-    // auto results = client->CallAwait<PointChooseIDMoveResp>(req, 5000);
-    //
-    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
-    // if (results.first == 0 && !results.second.empty()) {
-    //     std::vector<double>& pq = results.second[0].target_pq;
-    //     char buf[512];
-    //     snprintf(buf, sizeof(buf),
-    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
-    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
-    //     std::vector<std::string> blend_cmds = {
-    //         "{MoveBlend --type=first_insert}",
-    //         buf,
-    //         "{MoveBlend --type=start}"
-    //     };
-    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
-    // }
+    //持续发送 10 组指令
+    for(int i = 0; i < 10; ++i)
+    {
+        send_rpcAsy(client, moveabsj_cmd, 0, 10000);
+        delay_ms(200);
+    }
 
     return 0;
 }

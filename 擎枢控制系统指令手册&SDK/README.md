@@ -83,24 +83,24 @@
 
 依赖 `common/rpc/` 公共库，通过 RPC 协议（端口 **5868**）与机器人控制器通信。
 
-| 编号 | SDK | 功能 | 交互方式 |
+| 编号 | SDK | 功能 | 示例结构 |
 |------|-----|------|----------|
-| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 循环运动 |
-| SD-02 | MoveAbsJ_Double | 双臂关节空间绝对位置运动 | 循环运动 |
-| SD-03 | MoveBlend | 笛卡尔空间混合轨迹（直线+圆弧） | 交互菜单 |
-| SD-04 | MoveS | 笛卡尔空间 S 曲线轨迹 | 交互菜单 |
-| SD-05 | MoveSeriesToppJ | 关节空间连续 Topp 轨迹 | 交互菜单 |
-| SD-06 | JogC | 笛卡尔空间方向点动 | 循环运动 |
-| SD-07 | JogAnyJ | 单臂任意关节位置控制 | 交互菜单 |
-| SD-08 | JogAnyJ_Double | 双臂任意关节位置控制 | 交互菜单 |
-| SD-09 | JogAnyC | 笛卡尔空间任意位姿控制 | 交互菜单 |
-| SD-10 | DragInCST | CST 空间拖动 | 交互启停 |
-| SD-11 | ForcePositionHybridControl | 力位混合控制（零力/恒力/混合） | 持续型控制 |
-| SD-12 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 交互菜单 |
-| SD-13 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 交互菜单 |
+| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 同步初始化 + 异步循环运动 |
+| SD-02 | MoveAbsJ_Double | 双臂关节空间绝对位置运动 | 同步初始化 + 异步循环运动 |
+| SD-03 | MoveBlend | 笛卡尔空间混合轨迹（直线+圆弧） | 同步初始化 + 异步循环运动 |
+| SD-04 | MoveS | 笛卡尔空间 S 曲线轨迹 | 同步初始化 + 异步循环运动（另有 EGM 偏移变体） |
+| SD-05 | MoveSeriesToppJ | 关节空间连续 Topp 轨迹 | 同步初始化 + 异步循环运动 |
+| SD-06 | JogC | 笛卡尔空间方向点动 | 同步初始化 + 异步循环运动 |
+| SD-07 | JogAnyJ | 单臂任意关节位置控制 | 同步初始化 + 异步循环运动（另有 main-sine 交互式正弦变体） |
+| SD-08 | JogAnyJ_Double | 双臂任意关节位置控制 | 同步初始化 + 异步循环运动 |
+| SD-09 | JogAnyC | 笛卡尔空间任意位姿控制 | 同步初始化 + 异步循环运动 |
+| SD-10 | DragInCST | CST 空间拖动 | 同步初始化/切换模式 + 异步拖拽 + 同步退出 |
+| SD-11 | ForcePositionHybridControl | 力位混合控制（零力/恒力/混合） | 持续型控制（Ctrl+C 退出时发 Stop） |
+| SD-12 | IOModule | IO 模块（GetDI / SetDO / DOPulse） | 同步依次执行 |
+| SD-13 | SyncAsync | 同步 vs 异步 RPC 性能对比 | 同步运动 + 异步 SpeedL 对比 |
 | SD-14 | SubLoop | 子循环控制（双模型并行执行） | 交互输入 |
-| SD-15 | ReadPdo | EtherCAT PDO 数据读取（ReadPdo 指令） | 交互菜单 |
-| SD-16 | ReadSdo | EtherCAT SDO 数据读取（ReadSdo 指令） | 交互菜单 |
+| SD-15 | ReadPdo | EtherCAT PDO 数据读取（ReadPdo 指令） | 同步读取 + 扩展字段解析 |
+| SD-16 | ReadSdo | EtherCAT SDO 数据读取（ReadSdo 指令） | 同步读取 + 扩展字段解析 |
 
 ### B 类：独立通信 SDK（1 个）
 
@@ -339,11 +339,15 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 
 | 模式 | C++ 函数 | Python 函数 | 适用场景 |
 |------|----------|-------------|----------|
-| 同步 | `send_rpcsy<RespDemo>()` | `send_rpcsy()` | 大多数运动指令，需等待响应确认 |
-| 异步 | `send_rpcAsy()` | `send_rpc_async()` | SpeedL 等在线规划、持续型控制 |
+| 同步 | `send_rpcsy<RespDemo>()` | `send_rpcsy()` | 初始化、IO/读写等离散指令，需等待响应确认 |
+| 异步 | `send_rpcAsy()` | `send_rpc_async()` | 运动指令 for 循环持续下发、SpeedL 在线规划、持续型控制 |
 
-- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。适合 MoveAbsJ、JogC 等常规运动。
+- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。所有示例的同步发送超时统一为 **50000ms**。
 - **异步 RPC**：快速下发指令后立即返回，不阻塞等待。适合 SpeedL 在线规划、ForcePositionHybridControl 持续力控等场景。
+- **统一示例结构**：标准运动类 SDK 示例（main.cpp / main.py）统一为两段式：示例 1 同步发送 init_cmds 初始化，示例 2 异步 for 循环持续发送运动指令（循环 10 次，每次间隔 200ms）。
+- **init_cmds 统一约定**：`{Clear}` → `{Disable}` → [`{SetUsingSP --state=on}` 仅笛卡尔运动] → `{Recover}`（仅一个） → `{Enable}` → `{Var --clear}` 及变量定义 → `{Start}`。
+- **{SetUsingSP --state=on}**：开启最优求解器，专为笛卡尔空间运动适配，仅笛卡尔运动类 SDK（MoveS/MoveBlend/JogC/JogAnyC/DragInCST/SpeedL/力位混合控制）需要，关节运动类（MoveAbsJ/JogAnyJ/MoveSeriesToppJ 及双臂版本）与非运动类（IO/ReadPdo/ReadSdo/SubLoop）不需要。
+- **Stop 指令**：仅在需要显式停止的场景保留（EGM 偏移独立线程打断、力位混合控制 Ctrl+C 退出、DragInCST 退出拖拽模式、main-sine 交互式停止），其余示例依靠指令自然结束或 Ctrl+C 中断。
 - **SubLoop 特殊要求**：第一条指令**必须**使用异步发送，且 timeout 要足够大。
 - **带扩展字段的响应**：ReadPdo / ReadSdo 指令的返回值带 `pdo_value` / `sdo_value` 扩展字段，C++ 侧使用 `send_rpcsy<RespPdo>()` / `send_rpcsy<RespSdo>()` 解析（类型定义见 `resp_dto.h`）；Python 侧通过 `CallAwaitRaw` 获取原始 JSON 后自行解析。
 
@@ -351,9 +355,11 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 
 | 参数 | C++ | Python |
 |------|-----|--------|
-| `timeout_ms` | 毫秒 (ms) | 毫秒 (ms) |
+| `timeout_ms` | 毫秒 (ms)，同步发送统一为 50000 | 毫秒 (ms)，同步发送统一为 50000 |
 | `sleep_time_ms` | 毫秒 (ms) | — |
 | `sleep_s` / `wait_s` | — | 秒 (s) |
+
+> 注意：Python `send_rpcsy` 的实际签名为 `(client, cmd_list, sleep_s, timeout_ms)`，`sleep_s` 在前、`timeout_ms` 在后，与 C++ 位置顺序相反；示例均使用关键字参数调用，不受位置影响。
 
 ### 4. 指令集结构
 

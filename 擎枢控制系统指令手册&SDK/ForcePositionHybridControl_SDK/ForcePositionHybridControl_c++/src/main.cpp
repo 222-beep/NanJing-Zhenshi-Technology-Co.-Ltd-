@@ -37,13 +37,11 @@ int main() {
     const std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{Mode}",
-        "{SetMaxToq}",
+        "{SetUsingSP --state=on}",
         "{Recover}",
-        "{SetRate}",
         "{Enable}",
         "{Var --clear}",
-        "{Recover}",
+        "{Start}",
     };
 
     const std::vector<std::string> stop_cmds = {
@@ -92,7 +90,7 @@ int main() {
     cpp_rpc::CPPClient client(robot_ip, 5868);
 
     // Python: send_rpcsy(..., 500, 0.1) -> 此处 sleep 与 py 一致用 100ms
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     try {
         // ForcePositionHybridControl 是持续型控制，不要在循环里一直重复发
@@ -107,7 +105,7 @@ int main() {
     }
 
     try {
-        send_rpcsy<RespDemo>(client, stop_cmds, 100, 1000);
+        send_rpcsy<RespDemo>(client, stop_cmds, 100, 50000);
         std::cout << "Stop command sent.\n";
     } catch (const std::exception& exc) {
         std::cerr << "Failed to send Stop: " << exc.what() << "\n";

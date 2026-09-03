@@ -9,31 +9,24 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{Mode}",
-    "{SetMaxToq}",
     "{Recover}",
-    "{SetRate}",
     "{Enable}",
+    "{Start}"
 ]
 
-# ReadPdo 指令参数（可自行修改）
-# slave_id  : 从站编号
-# index     : PDO 对象索引（十六进制）
-# sub_index : PDO 对象子索引（十六进制）
-# size      : 读取数据位宽（bit）
-# interval  : 读取间隔（s）
-# loop      : 循环读取次数
-readpdo_cmds = [
+# ReadPdo 读取命令
+readpdo_cmd = [
+    # "{ReadPdo --slave_id=（从站编号）
+    #            --index=（PDO 对象索引，十六进制）
+    #            --sub_index=（PDO 对象子索引，十六进制）
+    #            --size=（读取数据位宽 bit）
+    #            --interval=（读取间隔 s）
+    #            --loop=（循环读取次数）}"
     "{ReadPdo --slave_id=6 --index=0x6041 --sub_index=0x00 --size=16 --interval=1 --loop=1}"
 ]
 
-# 用户自定义指令列表
-your_cmds = [
-    # 添加你的指令
-]
 
-
-def send_readpdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
+def send_readpdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 50000):
     """用 CallAwaitRaw 同步发送 ReadPdo，返回原始 JSON（含 pdo_value 等全部字段）"""
     msg, seq_id = client._new_msg_with_seq(cmd)
     print(f"\nsend[seq={seq_id}]: {cmd}")
@@ -67,11 +60,18 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 示例 1：通用同步 RPC（最常见用法）
-    # ReadPdo 走原始 JSON 接口解析扩展返回值（pdo_value）
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500)
+    # ==================================================================
+    #  示例 1：通用同步 RPC（最常见用法）
+    #  执行初始化
+    # ==================================================================
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
 
-    for cmd in readpdo_cmds:
+    # ==================================================================
+    #  示例 2：扩展返回值同步 RPC
+    #  ReadPdo 走原始 JSON 接口解析扩展返回值（pdo_value）
+    # ==================================================================
+    for cmd in readpdo_cmd:
         resp_json = send_readpdo_raw(client, cmd)
         if isinstance(resp_json, list):
             for r in resp_json:

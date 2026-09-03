@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <future>
 
 // ==================================================================
 //  main  ——  使用示例
@@ -16,24 +17,17 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{SetUsingSP --state=on}",
         "{Enable}",
+        "{Start}"
     };
 
-    // JogAnyC 运动命令（robottarget 为笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
-    std::vector<std::string> jog_cmds = {
+    std::vector<std::string> joganyc_cmd = {
+    //    "{JogAnyC --robottarget_value={ 笛卡尔位姿 x,y,z,q1,q2,q3,q4，x/y/z 单位：米 }
+    //               --cartesian_vel={ 笛卡尔速度 }
+    //               --cartesian_acc={ 笛卡尔加速度 }
+    //               --cartesian_dec={ 笛卡尔减速度 }}"
         "{JogAnyC --robottarget_value={0.6,0.1,0.64,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}"
-    };
-
-    // 停止命令
-    std::vector<std::string> stop_cmds = {
-        "{Stop --last_count=10}"
-    };
-
-    std::vector<std::string> your_cmds = {
-        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
-
-        //add your cmds
-
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -49,42 +43,24 @@ int main() {
     // ==================================================================
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
+    //  执行初始化
     // ==================================================================
-    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
-    send_rpcsy<RespDemo>(client, jog_cmds, 1000, 5000);
-    send_rpcsy<RespDemo>(client, stop_cmds, 1000, 5000);
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    //  for 循环持续发送 JogAnyC 保持点动
     // ==================================================================
-    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
-    // send_rpcAsy(client, jog_cmds, 1000, 5000);
-    // send_rpcAsy(client, stop_cmds, 1000, 5000);
+    //  send_rpcAsy(client, joganyc_cmd, 间隔ms, 超时ms)
 
-    // // ==================================================================
-    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
-    // //  当某个指令返回了额外的字段时，使用专用的响应类型
-    // // ==================================================================
-    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
-    // core::Msg req(your_cmds[0]);
-    // req.setMsgID(10001);
-    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
-    //
-    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
-    // if (results.first == 0 && !results.second.empty()) {
-    //     std::vector<double>& pq = results.second[0].target_pq;
-    //     char buf[512];
-    //     snprintf(buf, sizeof(buf),
-    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
-    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
-    //     std::vector<std::string> blend_cmds = {
-    //         "{MoveBlend --type=first_insert}",
-    //         buf,
-    //         "{MoveBlend --type=start}"
-    //     };
-    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
-    // }
+    //持续发送 10 条指令
+    for(int i = 0; i < 10; ++i)
+    {
+        send_rpcAsy(client, joganyc_cmd, 0, 10000);
+        delay_ms(200);
+    }
 
     return 0;
 }

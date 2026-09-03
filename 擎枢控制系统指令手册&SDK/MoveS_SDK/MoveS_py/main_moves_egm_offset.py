@@ -13,6 +13,7 @@ from rpc_client import RpcClient, send_rpcsy, send_rpc_thread
 init_cmds = [
     "{Clear}",
     "{Disable}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（需在 MoveS 发送之前）
     "{Enable}",
     "{Var --clear}",
     # 定义轨迹目标点变量（笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
@@ -21,8 +22,7 @@ init_cmds = [
     "{Var --type=robottarget --name=p3 --value={0.44,-0.32,0.48,0,1,0,0}}",
     "{Var --type=robottarget --name=p4 --value={0.38,-0.38,0.44,0,1,0,0}}",
     "{Var --type=robottarget --name=p5 --value={0.32,-0.32,0.48,0,1,0,0}}",
-    # 开启最优求解器（需在 MoveS 发送之前）
-    "{SetUsingSP --state=on}",
+    "{Start}"
 ]
 
 # MoveS 轨迹命令（同步发送）：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
@@ -52,9 +52,9 @@ def main():
         return
 
     # 示例 1：通用同步 RPC（最常见用法）
-    # 可选参数: send_rpcsy(client, cmds, timeout_ms, sleep_s)
-    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)
-    send_rpcsy(client, moves_cmds, timeout_ms=10000, sleep_s=0.5)
+    #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    send_rpcsy(client, moves_cmds, sleep_s=0.5, timeout_ms=50000)
 
     # 示例 2：独立线程发送（send_rpc_thread，见 rpc_client.py）
     # 在独立线程中发送，不阻塞当前线程，返回 Future，

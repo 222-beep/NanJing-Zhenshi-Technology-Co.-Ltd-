@@ -9,30 +9,23 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{Mode}",
-    "{SetMaxToq}",
     "{Recover}",
-    "{SetRate}",
     "{Enable}",
+    "{Start}"
 ]
 
-# ReadSdo 指令参数（可自行修改）
-# slave_id  : 从站编号（从 0 开始，0 通常代表网络中第一个从站）
-# index     : 对象字典主索引（十六进制）
-# sub_index : 对象字典子索引（十六进制）
-# size      : 字节长度，指定要读取的数据大小
-# loop      : 循环次数，指令命令执行的总次数
-readsdo_cmds = [
+# ReadSdo 读取命令
+readsdo_cmd = [
+    # "{ReadSdo --slave_id=（从站编号，从 0 开始，0 通常代表网络中第一个从站）
+    #            --index=（对象字典主索引，十六进制）
+    #            --sub_index=（对象字典子索引，十六进制）
+    #            --size=（读取字节长度）
+    #            --loop=（循环读取次数）}"
     "{ReadSdo --slave_id=5 --index=0x6064 --sub_index=0x00 --size=4 --loop=1}"
 ]
 
-# 用户自定义指令列表
-your_cmds = [
-    # 添加你的指令
-]
 
-
-def send_readsdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 5000):
+def send_readsdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 50000):
     """用 CallAwaitRaw 同步发送 ReadSdo，返回原始 JSON（含 sdo_value 等全部字段）"""
     msg, seq_id = client._new_msg_with_seq(cmd)
     print(f"\nsend[seq={seq_id}]: {cmd}")
@@ -66,11 +59,18 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 示例 1：通用同步 RPC（最常见用法）
-    # ReadSdo 走原始 JSON 接口解析扩展返回值（sdo_value）
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=500)
+    # ==================================================================
+    #  示例 1：通用同步 RPC（最常见用法）
+    #  执行初始化
+    # ==================================================================
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
 
-    for cmd in readsdo_cmds:
+    # ==================================================================
+    #  示例 2：扩展返回值同步 RPC
+    #  ReadSdo 走原始 JSON 接口解析扩展返回值（sdo_value）
+    # ==================================================================
+    for cmd in readsdo_cmd:
         resp_json = send_readsdo_raw(client, cmd)
         if isinstance(resp_json, list):
             for r in resp_json:

@@ -1,77 +1,67 @@
-import sys, os
+import sys, os, time
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
 from rpc_client import RpcClient, send_rpcsy, send_rpc_async
+
+ROBOT_IP = "192.168.11.11"
 
 # 初始化命令列表 - 双臂版本
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{Mode}",
-    "{SetMaxToq}",
     "{Recover}",
-    "{SetRate}",
     "{Enable}",
     "{Var --clear}",
-    "{Recover}",
-    # 定义机械臂1的关节目标变量
+    # "{Var --type=jointtarget --name=（变量名）
+    #           --value={ jointtarget 共 10 位，不足补 0，单位：弧度 }}"
+    # 机械臂 1 关节目标变量
     "{Var --type=jointtarget --name=j0 --value={0,0,0,0,0,0,0,0,0,0}}",
     "{Var --type=jointtarget --name=j1 --value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
     "{Var --type=jointtarget --name=j2 --value={0.2,0,0,0,0,0,0,0,0,0}}",
-    "{Var --type=jointtarget --name=j3 --value={-0.1,0,0,0,0,0,0,0,0,0}}",
-    "{Var --type=jointtarget --name=j4 --value={-0.2,0,0,0,0,0,0,0,0,0}}",
-    # 定义机械臂2的关节目标变量
+    # 机械臂 2 关节目标变量
     "{Var --type=jointtarget --name=j11 --value={0,0,0,0,0,0,0,0,0,0}}",
     "{Var --type=jointtarget --name=j21 --value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
     "{Var --type=jointtarget --name=j22 --value={0.2,0,0,0,0,0,0,0,0,0}}",
-    "{Var --type=jointtarget --name=j23 --value={-0.1,0,0,0,0,0,0,0,0,0}}",
-    "{Var --type=jointtarget --name=j24 --value={-0.2,0,0,0,0,0,0,0,0,0}}"
+    "{Start}"
 ]
 
-# 双臂运动指令列表 - 使用|分隔两个机械臂的指令
-motion_cmds = [  
-    # 双臂同时运动到初始位置
-    "{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}",
-    # 双臂同时运动到不同位置
+# 双臂 MoveAbsJ 指令使用 || 分隔左右臂
+moveabsj_cmd = [
+    # "{MoveAbsJ --jointtarget_var=（左臂关节目标变量名）
+    #  ||MoveAbsJ --jointtarget_var=（右臂关节目标变量名）}"
     "{MoveAbsJ --jointtarget_var=j1||MoveAbsJ --jointtarget_var=j21}",
-    "{MoveAbsJ --jointtarget_var=j2||MoveAbsJ --jointtarget_var=j22}",                          
-    "{MoveAbsJ --jointtarget_var=j3||MoveAbsJ --jointtarget_var=j23}",
-    "{MoveAbsJ --jointtarget_var=j4||MoveAbsJ --jointtarget_var=j24}"
+    "{MoveAbsJ --jointtarget_var=j2||MoveAbsJ --jointtarget_var=j22}",
+    "{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}"
 ]
 
-# 双臂在线规划指令
-motion_speedL_cmds = [
-    # 双臂同时进行在线规划运动
-    "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000||SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000}",
-    "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000||SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000}",
-    "{Stop||Stop}",
-    "{Start||Start}",
-]
-
-# 用户自定义指令列表
-your_cmds = [
-    # 添加你的指令
-]
-
-ROBOT_IP = "192.168.11.11"
 
 def main():
     """主函数"""
-    # 创建客户端
+    # 创建客户端连接机器人控制器
     client = RpcClient(ROBOT_IP)
-
     if not client.is_connected():
         print(f"Connection failed: {client.error_info()}")
         return
-    
-    # 发送初始化指令  
-    send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=0.1)  # 同步rpc (client, 指令, 超时ms, 间隔s)
-    
-    # 主循环发送运动指令
-    while True:
-        # 发送同步双臂运动指令
-        send_rpcsy(client, motion_cmds, timeout_ms=5000, sleep_s=0.5)
-        # 发送异步双臂在线规划指令
-        send_rpc_async(client, motion_speedL_cmds, timeout_ms=10000, wait_s=0.5)
+
+    # ==================================================================
+    #  示例 1：通用同步 RPC（最常见用法）
+    #  返回值只有 return_code / subcmd_index / return_message
+    #  执行初始化
+    # ==================================================================
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+
+    # ==================================================================
+    #  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    #  for 循环持续发送双臂 MoveAbsJ
+    #  依次运动到 (j1,j21) -> (j2,j22) -> (j0,j11)
+    # ==================================================================
+    #  send_rpc_async(client, moveabsj_cmd, wait_s=间隔秒, timeout_ms=超时毫秒)
+
+    # 持续发送 10 组指令
+    for _ in range(10):
+        send_rpc_async(client, moveabsj_cmd, wait_s=0, timeout_ms=10000)
+        time.sleep(0.2)
+
 
 # 程序入口
 if __name__ == "__main__":

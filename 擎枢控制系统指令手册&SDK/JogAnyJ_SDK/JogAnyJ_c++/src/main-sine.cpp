@@ -204,6 +204,7 @@ int main() {
         "{Clear}",
         "{Disable}",
         "{Enable}",
+        "{Start}",
     };
 
     // 全零初始关节位置
@@ -223,7 +224,7 @@ int main() {
     cpp_rpc::CPPClient client(ROBOT_IP, ROBOT_PORT);
 
     // 执行初始化命令序列（Clear → Disable → Enable）
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 5000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     // 主循环
     while (true) {
@@ -251,7 +252,7 @@ int main() {
         else if (input == "stop") {
             running = false;
             delay_ms(100);
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 5000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 50000);
             cout << "运动已停止\n";
         }
         else if (input == "custom") {
@@ -284,7 +285,7 @@ int main() {
                 cout << "执行指令: " << custom_cmd << endl;
 
                 vector<string> custom_cmds = { custom_cmd };
-                send_rpcsy<RespDemo>(client, custom_cmds, 100, 5000);
+                send_rpcsy<RespDemo>(client, custom_cmds, 100, 50000);
             }
             catch (const exception& e) {
                 cout << "输入格式错误，请确保输入的是数字\n";
@@ -295,7 +296,7 @@ int main() {
             cout << "退出程序...\n";
             running = false;
             delay_ms(100);
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 5000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 50000);
             break;
         }
         else {

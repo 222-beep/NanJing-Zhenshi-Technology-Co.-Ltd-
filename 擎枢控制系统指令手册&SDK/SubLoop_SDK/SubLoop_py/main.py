@@ -7,13 +7,10 @@ import sys
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{Mode}",
-    "{SetMaxToq}",
     "{Recover}",
-    "{SetRate}",
     "{Enable}",
     "{Var --clear}",
-    "{Recover}",
+    "{Start}",
 ]
 
 def main():
@@ -25,7 +22,7 @@ def main():
         return
 
     # 发送初始化指令
-    # send_rpcsy(client, init_cmds, timeout_ms=500, sleep_s=1)
+    # send_rpcsy(client, init_cmds, sleep_s=1, timeout_ms=50000)
 
     # 第一条SubLoop指令
     first_subloop_cmds = [

@@ -19,6 +19,7 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{SetUsingSP --state=on}",   // 开启最优求解器（需在 MoveS 发送之前）
         "{Enable}",
         "{Var --clear}",
         // 定义轨迹目标点变量（笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
@@ -27,8 +28,7 @@ int main() {
         "{Var --type=robottarget --name=p3 --value={0.44,-0.32,0.48,0,1,0,0}}",
         "{Var --type=robottarget --name=p4 --value={0.38,-0.38,0.44,0,1,0,0}}",
         "{Var --type=robottarget --name=p5 --value={0.32,-0.32,0.48,0,1,0,0}}",
-        // 开启最优求解器（需在 MoveS 发送之前）
-        "{SetUsingSP --state=on}"
+        "{Start}"
     };
 
     // MoveS 轨迹命令（同步发送）：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
@@ -62,8 +62,8 @@ int main() {
     //  返回值只有 return_code / subcmd_index / return_message
     // ==================================================================
     // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
-    send_rpcsy<RespDemo>(client, moves_cmds, 500, 10000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, moves_cmds, 500, 50000);
 
     // ==================================================================
     //  示例 2：独立线程发送（send_rpc_thread，见 rpc_client.h）

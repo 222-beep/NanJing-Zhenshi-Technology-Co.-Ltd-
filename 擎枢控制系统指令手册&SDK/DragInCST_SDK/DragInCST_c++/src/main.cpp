@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <future>
 
 // ==================================================================
 //  main  ——  使用示例
@@ -16,28 +17,31 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{SetUsingSP --state=on}",
         "{Enable}",
+        "{Start}"
     };
 
-    // 开始 CST 拖拽
-    std::vector<std::string> drag_start_cmds = {
-        "{SwitchToCST}",
+    // 切换到 CST 拖拽模式（拖拽前单独同步下发一次）
+    std::vector<std::string> switch_cst_cmd = {
+        "{SwitchToCST}"
+    };
+
+    std::vector<std::string> dragincst_cmd = {
+    //    "{DragInCST --cf_coef={ 力控系数，共 7 位 }
+    //                 --vf_coef={ 速度反馈系数，共 7 位 }
+    //                 --vel_limit={ 各方向速度限制，共 7 位，单位 m/s 或 rad/s }
+    //                 --ping_pong_amp=（乒乓幅度）
+    //                 --zero_check=（零漂检测阈值）}"
         "{DragInCST --cf_coef={0,0,0,0,0,0,0} --vf_coef={0,0,0,0,0,0,0} --vel_limit={0.3,0.3,0.3,0.3,0.3,0.3,0.3} --ping_pong_amp=0 --zero_check=0.004}"
     };
 
-    // 停止 CST 拖拽
-    std::vector<std::string> drag_stop_cmds = {
+    // 退出 CST 拖拽，恢复到 CSP 位置模式
+    std::vector<std::string> exit_cmds = {
         "{Stop --last_count=10}",
         "{SwitchToCSP}",
         "{Recover}",
         "{Start}"
-    };
-
-    std::vector<std::string> your_cmds = {
-        "{PointChooseIDMove --mid_point_robottarget=ppp --point_id=13 --len_end=89 --len_point=10 --cal_on=0}"
-
-        //add your cmds
-
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -53,42 +57,32 @@ int main() {
     // ==================================================================
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
+    //  执行初始化
     // ==================================================================
-    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 500);
-    send_rpcsy<RespDemo>(client, drag_start_cmds, 1000, 5000);
-    send_rpcsy<RespDemo>(client, drag_stop_cmds, 1000, 5000);
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+
+    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+
+    // 切换到 CST 拖拽模式（同步下发一次）
+    send_rpcsy<RespDemo>(client, switch_cst_cmd, 100, 50000);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
+    //  for 循环持续发送 DragInCST 保持拖拽状态
     // ==================================================================
-    // 可选参数: send_rpcAsy(client, cmds, 等待ms, 超时ms)
-    // send_rpcAsy(client, drag_start_cmds, 1000, 5000);
-    // send_rpcAsy(client, drag_stop_cmds, 1000, 5000);
+    //  send_rpcAsy(client, dragincst_cmd, 间隔ms, 超时ms)
 
-    // // ==================================================================
-    // //  示例 3：扩展返回值（PointChooseIDMove 返回 target_pq）
-    // //  当某个指令返回了额外的字段时，使用专用的响应类型
-    // // ==================================================================
-    // // 通过 CallAwait 直接拿到带扩展字段的返回结果
-    // core::Msg req(your_cmds[0]);
-    // req.setMsgID(10001);
-    // auto results = client.CallAwait<PointChooseIDMoveResp>(req, 5000);
-    //
-    // // ---- 拿到 target_pq，拼成 MoveBlend 指令序列再发送 --------------
-    // if (results.first == 0 && !results.second.empty()) {
-    //     std::vector<double>& pq = results.second[0].target_pq;
-    //     char buf[512];
-    //     snprintf(buf, sizeof(buf),
-    //         "{MoveBlend --type=insert_line --robottarget_value={%.6f,%.6f,%.6f,%.6f,%.6f,%.6f,%.6f} --speed=v50}",
-    //         pq[0], pq[1], pq[2], pq[3], pq[4], pq[5], pq[6]);
-    //     std::vector<std::string> blend_cmds = {
-    //         "{MoveBlend --type=first_insert}",
-    //         buf,
-    //         "{MoveBlend --type=start}"
-    //     };
-    //     send_rpcsy<RespDemo>(client, blend_cmds, 500, 5000);
-    // }
+    //持续发送 10 组指令
+    for(int i = 0; i < 10; ++i)
+    {
+        send_rpcAsy(client, dragincst_cmd, 0, 10000);
+        delay_ms(200);
+    }
+
+    // ==================================================================
+    //  退出 CST 拖拽模式，恢复到 CSP 位置模式
+    // ==================================================================
+    send_rpcsy<RespDemo>(client, exit_cmds, 100, 50000);
 
     return 0;
 }
