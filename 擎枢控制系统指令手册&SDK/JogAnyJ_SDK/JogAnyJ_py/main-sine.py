@@ -31,7 +31,7 @@ AMP_DEG = [3.0] * NUM_JOINTS
 
 # 正弦运动参数
 SINE_FREQ = 2.0    # 频率 2Hz（周期 0.5s）
-SINE_DT   = 0.01   # 控制步长 20ms（100Hz 下发）
+SINE_DT   = 0.01   # 控制步长 10ms（100Hz 下发）
 
 # JogAnyJ 运动指令参数（正弦运动时使用）
 MOTION_ACC = "{12.0}"   # 加速度
@@ -142,10 +142,12 @@ def sine_motion_loop(client):
 def main():
     global running
 
-    # 初始化命令：清除错误 → 去使能 → 使能 → 启动
+    # 初始化命令：清除错误 → 去使能 → 恢复 → 模式 → 使能 → 启动
     init_cmds = [
         "{Clear}",
         "{Disable}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}",
     ]
@@ -170,7 +172,7 @@ def main():
         print(f"Connection failed: {client.error_info()}")
         return
 
-    # 执行初始化命令序列（Clear → Disable → Enable → Start）
+    # 执行初始化命令序列（Clear → Disable → Recover → Mode → Enable → Start）
     send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
 
     # 主循环

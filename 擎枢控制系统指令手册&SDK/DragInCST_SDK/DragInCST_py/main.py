@@ -8,8 +8,10 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
+    "{Recover}",
+    "{Mode}",
     "{Enable}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Start}"
 ]
 

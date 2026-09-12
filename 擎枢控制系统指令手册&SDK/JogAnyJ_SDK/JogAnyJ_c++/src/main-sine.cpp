@@ -51,7 +51,7 @@ const double AMP_DEG[NUM_JOINTS] = { 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0 };
 
 // 正弦运动参数
 const double SINE_FREQ = 2.0;    // 频率 2Hz（周期 0.5s）
-const double SINE_DT   = 0.01;   // 控制步长 20ms（100Hz 下发）
+const double SINE_DT   = 0.01;   // 控制步长 10ms（100Hz 下发）
 
 // JogAnyJ 运动指令参数（正弦运动时使用）
 const string MOTION_ACC = "{12.0}";   // 加速度
@@ -199,10 +199,12 @@ int main() {
 #endif
     string input;
 
-    // 初始化命令：清除错误 → 去使能 → 使能
+    // 初始化命令：清除错误 → 去使能 → 恢复 → 模式 → 使能 → 启动
     vector<string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}",
     };
@@ -223,7 +225,7 @@ int main() {
     // 创建 RPC 客户端连接
     cpp_rpc::CPPClient client(ROBOT_IP, ROBOT_PORT);
 
-    // 执行初始化命令序列（Clear → Disable → Enable）
+    // 执行初始化命令序列（Clear → Disable → Recover → Mode → Enable → Start）
     send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
 
     // 主循环

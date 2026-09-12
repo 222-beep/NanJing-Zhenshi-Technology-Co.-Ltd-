@@ -17,6 +17,8 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}"
     };
@@ -27,7 +29,9 @@ int main() {
     //               --joint_acc=（关节加速度）
     //               --joint_dec=（关节减速度）
     //               --last_count=（末尾保持周期数）}"
-        "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
+        "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0.6,0,0,0,0,0,0} --joint_vel=3.0 --joint_acc=0.5 --joint_dec=0.5 --last_count=10}",
+        "{JogAnyJ --jointtarget_value={0.2,-0.4,0.2,0.5,0,0,0,0,0,0} --joint_vel=3.0 --joint_acc=0.5 --joint_dec=0.5 --last_count=10}",
+        "{JogAnyJ --jointtarget_value={0.3,-0.3,0.1,0.4,0,0,0,0,0,0} --joint_vel=3.0 --joint_acc=0.5 --joint_dec=0.5 --last_count=10}",
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -55,11 +59,11 @@ int main() {
     // ==================================================================
     //  send_rpcAsy(client, joganyj_cmd, 间隔ms, 超时ms)
 
-    //持续发送 10 条指令
-    for(int i = 0; i < 10; ++i)
+    //持续发送 3 条指令
+    for(int i = 0; i < 3; ++i)
     {
-        send_rpcAsy(client, joganyj_cmd, 0, 10000);
-        delay_ms(200);
+        send_rpcsy<RespDemo>(client, std::vector<std::string>{joganyj_cmd[i]}, 100, 50000);
+        delay_ms(3000);
     }
 
     return 0;

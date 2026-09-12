@@ -17,23 +17,23 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",   // 开启最优求解器（MoveS 执行前必须开启）
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
-        "{Var --clear}",
-    //    "{Var --type=robottarget --name=（变量名）
-    //                  --value={ 笛卡尔位姿 x,y,z,q1,q2,q3,q4，x/y/z 单位：米 }}"
-        "{Var --type=robottarget --name=p1 --value={0.32,-0.32,0.48,0,1,0,0}}",
+        "{SetUsingSP --state=on}",   // 开启最优求解器（MoveS 执行前必须开启）
+
         "{Start}"
     };
 
     // MoveS 轨迹命令：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
     std::vector<std::string> moves_cmd = {
     //    "{MoveS --type=first_insert}  设置轨迹起点
-    //     {MoveS --type=insert --robottarget_var=（变量名）}  添加轨迹点
+    //     {MoveS --type=insert --robottarget_value={ 笛卡尔位姿 x,y,z,q1,q2,q3,q4，x/y/z 单位：米 }}  添加轨迹点
     //     {MoveS --type=start}  启动轨迹执行"
-        "{MoveS --type=first_insert}",
-        "{MoveS --type=insert --robottarget_var=p1}",
-        "{MoveS --type=start}"
+    "{MoveS --type=first_insert}",
+    "{MoveS --type=insert --robottarget_value={0.491,0,0.687,0,0,0,1}}",
+    "{MoveS --type=insert --robottarget_value={0.471,0.02,0.587,0,0,0,1}}",
+    "{MoveS --type=start --dist_threshold=0.001 --ratio=8.0}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------
@@ -62,9 +62,9 @@ int main() {
     //  send_rpcAsy(client, moves_cmd, 间隔ms, 超时ms)
 
     //持续发送 10 组指令
-    for(int i = 0; i < 10; ++i)
+    for(int i = 0; i < 3; ++i)
     {
-        send_rpcAsy(client, moves_cmd, 0, 10000);
+        send_rpcAsy(client, moves_cmd, 100, 50000);
         delay_ms(200);
     }
 

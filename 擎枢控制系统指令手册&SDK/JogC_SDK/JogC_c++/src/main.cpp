@@ -17,9 +17,10 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",
         "{Recover}",
+        "{Mode}",
         "{Enable}",
+        "{SetUsingSP --state=on}",
         "{Var --clear}",
         "{Start}"
     };
@@ -50,9 +51,10 @@ int main() {
     //  执行初始化
     // ==================================================================
     //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
-
+    
     send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
-
+    // send_rpcsy<RespDemo>(client, jogc_cmd, 100, 50000);
+    
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     //  for 循环持续发送 JogC 保持点动
@@ -63,7 +65,7 @@ int main() {
     for(int i = 0; i < 10; ++i)
     {
         send_rpcAsy(client, jogc_cmd, 0, 10000);
-        delay_ms(200);
+        delay_ms(5000);
     }
 
     return 0;

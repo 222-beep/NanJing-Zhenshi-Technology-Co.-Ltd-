@@ -13,26 +13,21 @@ from rpc_client import RpcClient, send_rpcsy, send_rpc_thread
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{SetUsingSP --state=on}",   # 开启最优求解器（需在 MoveS 发送之前）
+    "{Recover}",
+    "{Mode}",
     "{Enable}",
-    "{Var --clear}",
-    # 定义轨迹目标点变量（笛卡尔位姿 x,y,z,q1,q2,q3,q4，x,y,z 单位：米）
-    "{Var --type=robottarget --name=p1 --value={0.32,-0.32,0.48,0,1,0,0}}",
-    "{Var --type=robottarget --name=p2 --value={0.38,-0.26,0.52,0,1,0,0}}",
-    "{Var --type=robottarget --name=p3 --value={0.44,-0.32,0.48,0,1,0,0}}",
-    "{Var --type=robottarget --name=p4 --value={0.38,-0.38,0.44,0,1,0,0}}",
-    "{Var --type=robottarget --name=p5 --value={0.32,-0.32,0.48,0,1,0,0}}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（需在 MoveS 发送之前）
     "{Start}"
 ]
 
 # MoveS 轨迹命令（同步发送）：first_insert 设置起点 -> insert 添加轨迹点 -> start 执行
 moves_cmds = [
     "{MoveS --type=first_insert}",
-    "{MoveS --type=insert --robottarget_var=p1}",
-    "{MoveS --type=insert --robottarget_var=p2}",
-    "{MoveS --type=insert --robottarget_var=p3}",
-    "{MoveS --type=insert --robottarget_var=p4}",
-    "{MoveS --type=insert --robottarget_var=p5}",
+    "{MoveS --type=insert --robottarget_value={0.32,-0.32,0.48,0,1,0,0}}",
+    "{MoveS --type=insert --robottarget_value={0.38,-0.26,0.52,0,1,0,0}}",
+    "{MoveS --type=insert --robottarget_value={0.44,-0.32,0.48,0,1,0,0}}",
+    "{MoveS --type=insert --robottarget_value={0.38,-0.38,0.44,0,1,0,0}}",
+    "{MoveS --type=insert --robottarget_value={0.32,-0.32,0.48,0,1,0,0}}",
     "{MoveS --type=start}",
 ]
 

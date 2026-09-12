@@ -111,6 +111,8 @@ dumpbin /dependents cpp_rpc.dll
 - 本库使用 C++17 标准，调用方代码必须使用兼容的 C++ 标准版本（建议 C++17）
 - 本库使用 MSVC 的新预处理器 (`/Zc:preprocessor`)，调用方应使用 Visual Studio 2019 16.6 或更高版本
 - 编译时需启用 `/utf-8` 选项以确保中文字符正常处理
+- 5900实时通道只接受`FastJointTargetParam`固定二进制帧（5组机械臂×10个关节，共400字节），不接受普通字符串指令
+- 使用5900实时通道前，需先通过5868普通RPC启动`JogAnyJDirect`
 
 ---
 

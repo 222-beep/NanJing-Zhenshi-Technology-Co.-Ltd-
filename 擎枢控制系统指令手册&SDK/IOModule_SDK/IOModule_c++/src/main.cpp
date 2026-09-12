@@ -18,6 +18,7 @@ int main() {
         "{Clear}",
         "{Disable}",
         "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}"
     };

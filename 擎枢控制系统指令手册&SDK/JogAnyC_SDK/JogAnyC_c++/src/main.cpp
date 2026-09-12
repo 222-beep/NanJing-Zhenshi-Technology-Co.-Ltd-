@@ -17,8 +17,10 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
+        "{SetUsingSP --state=on}",
         "{Start}"
     };
 
@@ -27,7 +29,9 @@ int main() {
     //               --cartesian_vel={ 笛卡尔速度 }
     //               --cartesian_acc={ 笛卡尔加速度 }
     //               --cartesian_dec={ 笛卡尔减速度 }}"
-        "{JogAnyC --robottarget_value={0.6,0.1,0.64,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}"
+        "{JogAnyC --robottarget_value={0.6,0.1,0.64,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}",
+        "{JogAnyC --robottarget_value={0.5,0.2,0.74,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}",
+        "{JogAnyC --robottarget_value={0.4,0.3,0.64,-0.5,0.5,-0.5,0.5} --cartesian_vel={1.0} --cartesian_acc={1.0} --cartesian_dec={1.0}}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------

@@ -17,6 +17,8 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}"
     };
@@ -28,7 +30,11 @@ int main() {
     //               --last_count=（末尾保持周期数）
     //     ||JogAnyJ --...  （右臂指令，参数格式与左臂一致）}"
         "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
-        "||JogAnyJ --jointtarget_value={-0.1,0.5,-0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
+        "||JogAnyJ --jointtarget_value={-0.1,0.5,-0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={0.2,-0.4,0.2,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
+        "||JogAnyJ --jointtarget_value={-0.2,0.4,-0.2,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+        "{JogAnyJ --jointtarget_value={0.3,-0.3,0.1,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100"
+        "||JogAnyJ --jointtarget_value={-0.3,0.3,-0.1,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------

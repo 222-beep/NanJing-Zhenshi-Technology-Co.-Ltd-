@@ -8,6 +8,7 @@ init_cmds = [
     "{Clear}",
     "{Disable}",
     "{Recover}",
+    "{Mode}",
     "{Enable}",
     "{Var --clear}",
     "{Start}",

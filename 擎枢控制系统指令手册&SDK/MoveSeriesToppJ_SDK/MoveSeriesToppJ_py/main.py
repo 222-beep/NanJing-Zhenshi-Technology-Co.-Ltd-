@@ -8,6 +8,8 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
+    "{Recover}",
+    "{Mode}",
     "{Enable}",
     "{Start}"
 ]
@@ -50,7 +52,7 @@ def main():
     # 持续发送 10 组指令
     for _ in range(10):
         send_rpc_async(client, trajectory_cmd, wait_s=0, timeout_ms=10000)
-        time.sleep(0.2)
+        time.sleep(5) 
 
 
 # 程序入口

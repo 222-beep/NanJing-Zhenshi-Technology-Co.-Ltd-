@@ -8,6 +8,8 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
+    "{Recover}",
+    "{Mode}",
     "{Enable}",
     "{Start}"
 ]
@@ -19,7 +21,9 @@ joganyj_cmd = [
     #            --joint_acc=（关节加速度）
     #            --joint_dec=（关节减速度）
     #            --last_count=（末尾保持周期数）}"
-    "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}"
+    "{JogAnyJ --jointtarget_value={0.1,-0.5,0.3,0.6,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={0.2,-0.4,0.2,0.5,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
+    "{JogAnyJ --jointtarget_value={0.3,-0.3,0.1,0.4,0,0,0,0,0,0} --joint_vel=0.1 --joint_acc=0.5 --joint_dec=0.5 --last_count=100}",
 ]
 
 

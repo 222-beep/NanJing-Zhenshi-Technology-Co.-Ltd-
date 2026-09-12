@@ -18,6 +18,7 @@ int main() {
         "{Clear}",
         "{Disable}",
         "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}"
     };
@@ -54,18 +55,11 @@ int main() {
     // ==================================================================
     //  示例 2：扩展返回值同步 RPC
     //  ReadPdo 使用专用响应类型 RespPdo，额外返回 pdo_value 字段
+    //  debug=true 时由头文件 RespPrinter<RespPdo> 自动打印 pdo_value
     // ==================================================================
-    //  send_rpcsy<RespPdo>(client, readpdo_cmd, 间隔ms, 超时ms)
+    //  send_rpcsy<RespPdo>(client, readpdo_cmd, 间隔ms, 超时ms, debug=true)
 
-    auto results = send_rpcsy<RespPdo>(client, readpdo_cmd, 100, 50000);
-    for (const auto& r : results) {
-        std::cout << "[ReadPdo] subcmd_index: " << r.subcmd_index << std::endl;
-        std::cout << "[ReadPdo] return_code: " << r.return_code << std::endl;
-        std::cout << "[ReadPdo] return_message: " << r.return_message << std::endl;
-        if (r.has_pdo_value) {
-            printf("[ReadPdo] pdo_value: %d (0x%X)\n", r.pdo_value, r.pdo_value);
-        }
-    }
+    send_rpcsy<RespPdo>(client, readpdo_cmd, 100, 50000, true);
 
     return 0;
 }

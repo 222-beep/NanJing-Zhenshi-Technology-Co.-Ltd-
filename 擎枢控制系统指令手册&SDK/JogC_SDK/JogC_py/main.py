@@ -8,9 +8,10 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Recover}",
+    "{Mode}",
     "{Enable}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Var --clear}",
     "{Start}"
 ]
@@ -52,7 +53,7 @@ def main():
     # 持续发送 10 条指令
     for _ in range(10):
         send_rpc_async(client, jogc_cmd, wait_s=0, timeout_ms=10000)
-        time.sleep(0.2)
+        time.sleep(5)
 
 
 # 程序入口

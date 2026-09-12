@@ -9,6 +9,7 @@ init_cmds = [
     "{Clear}",
     "{Disable}",
     "{Recover}",
+    "{Mode}",
     "{Enable}",
     "{Var --clear}",
     # "{Var --type=jointtarget --name=（变量名）
@@ -24,10 +25,10 @@ init_cmds = [
     "{Start}"
 ]
 
-# 双臂 MoveAbsJ 指令使用 || 分隔左右臂
+# 双臂 MoveAbsJ 指令使用 || 分隔机器人1和机器人2
 moveabsj_cmd = [
-    # "{MoveAbsJ --jointtarget_var=（左臂关节目标变量名）
-    #  ||MoveAbsJ --jointtarget_var=（右臂关节目标变量名）}"
+    # "{MoveAbsJ --jointtarget_var=（机器人1关节目标变量名）
+    #  ||MoveAbsJ --jointtarget_var=（机器人2关节目标变量名）}"
     "{MoveAbsJ --jointtarget_var=j1||MoveAbsJ --jointtarget_var=j21}",
     "{MoveAbsJ --jointtarget_var=j2||MoveAbsJ --jointtarget_var=j22}",
     "{MoveAbsJ --jointtarget_var=j0||MoveAbsJ --jointtarget_var=j11}"

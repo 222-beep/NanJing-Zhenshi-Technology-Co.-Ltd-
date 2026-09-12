@@ -17,6 +17,8 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
         "{Start}"
     };
@@ -62,7 +64,7 @@ int main() {
     for(int i = 0; i < 10; ++i)
     {
         send_rpcAsy(client, trajectory_cmd, 0, 10000);
-        delay_ms(200);
+        delay_ms(5000);
     }
 
     return 0;

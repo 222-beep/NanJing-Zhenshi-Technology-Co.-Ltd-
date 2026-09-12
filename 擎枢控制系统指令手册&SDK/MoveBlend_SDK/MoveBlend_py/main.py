@@ -8,21 +8,24 @@ ROBOT_IP = "192.168.11.11"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
+    "{Recover}",
+    "{Mode}",
     "{Enable}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Start}"
 ]
 
 # MoveBlend 轨迹命令：first_insert 设置起点 -> insert_line/insert_circle 添加轨迹点 -> start 执行
 moveblend_cmd = [
     # "{MoveBlend --type=first_insert}  设置轨迹起点
-    #  {MoveBlend --type=insert_line   --robottarget_value={ x,y,z,q1,q2,q3,q4 } --zone={ 过渡区 } --speed=v50}
-    #  {MoveBlend --type=insert_circle --robottarget_value={...} --zone={...} --speed=v50}
+    #  {MoveBlend --type=insert_line   --robottarget_value={ x,y,z,q1,q2,q3,q4 } --zone={ 过渡区 } --speed=v50}  设置轨迹直线点
+    #  {MoveBlend --type=insert_circle --robottarget_value={...} --zone={...} --speed=v50}  设置轨迹圆弧点
     #  {MoveBlend --type=start}  启动轨迹执行"
     "{MoveBlend --type=first_insert}",
-    "{MoveBlend --type=insert_line --robottarget_value={0.32,-0.32,0.48,0,1,0,0} --zone={0.1,0.1} --speed=v50}",
+    "{MoveBlend --type=insert_line --robottarget_value={0.036,0,0.9,0,0,0,1} --zone={0.1,0.1} --speed=v50}",
+    "{MoveBlend --type=insert_line --robottarget_value={0.036,-0.068,0.9,0,0,0,1} --zone={0.1,0.1} --speed=v50}",
     "{MoveBlend --type=start}"
-]
+]   
 
 
 def main():
@@ -49,8 +52,8 @@ def main():
 
     # 持续发送 10 组指令
     for _ in range(10):
-        send_rpc_async(client, moveblend_cmd, wait_s=0, timeout_ms=10000)
-        time.sleep(0.2)
+        send_rpc_async(client, moveblend_cmd, wait_s=0, timeout_ms=50000)
+        time.sleep(5)
 
 
 # 程序入口

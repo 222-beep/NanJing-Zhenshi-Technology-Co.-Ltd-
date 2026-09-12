@@ -15,9 +15,10 @@ DRAG_MODE = "free_drag"
 init_cmds = [
     "{Clear}",
     "{Disable}",
-    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Recover}",
+    "{Mode}",
     "{Enable}",
+    "{SetUsingSP --state=on}",   # 开启最优求解器（笛卡尔空间运动适配）
     "{Var --clear}",
     "{Start}",
 ]

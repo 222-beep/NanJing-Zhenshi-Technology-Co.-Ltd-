@@ -37,9 +37,10 @@ int main() {
     const std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",
         "{Recover}",
+        "{Mode}",
         "{Enable}",
+        "{SetUsingSP --state=on}",
         "{Var --clear}",
         "{Start}",
     };

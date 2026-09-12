@@ -17,34 +17,29 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",
         "{Recover}",
+        "{Mode}",
         "{Enable}",
-        "{Var --clear}",
-    //    "{Var --type=jointtarget --name=（变量名）
-    //                  --value={ jointtarget 共 10 位，不足补 0，单位：弧度 }}"
-        "{Var --type=jointtarget --name=j0 --value={0,0,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j1 --value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
-        "{Var --type=jointtarget --name=j2 --value={0.2,0,0,0,0,0,0,0,0,0}}",
+        "{SetUsingSP --state=on}",
         "{Start}"
     };
 
-    // 同步示例指令：MoveAbsJ 依次到 j0 -> j1 -> j2
+    // 同步示例指令：MoveAbsJ 依次到 3 个关节目标点
     std::vector<std::string> sync_cmd = {
-    //    "{MoveAbsJ --jointtarget_var=（关节目标变量名，需先在 init_cmds 中通过 Var 预定义）}"
-        "{MoveAbsJ --jointtarget_var=j0}",
-        "{MoveAbsJ --jointtarget_var=j1}",
-        "{MoveAbsJ --jointtarget_var=j2}"
+    //    "{MoveAbsJ --jointtarget_value={ 关节目标，共 10 位，不足补 0，单位：弧度 }}"
+        "{MoveAbsJ --jointtarget_value={0,0,0,0,0,0,0,0,0,0}}",
+        "{MoveAbsJ --jointtarget_value={0.1,-1.5,0,0,0,0,0,0,0,0}}",
+        "{MoveAbsJ --jointtarget_value={0.2,0,0,0,0,0,0,0,0,0}}"
     };
 
     // 异步示例指令：SpeedL 在线规划往返
     std::vector<std::string> async_cmd = {
     //    "{SpeedL --vel={ 笛卡尔速度 vx,vy,vz,wx,wy,wz }
     //              --last_count=（末尾保持周期数）}"
-        "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000}",
-        "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000}",
-        "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=1000}",
-        "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=1000}"
+        "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=100}",
+        "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=100}",
+        "{SpeedL --vel={0.01,0,0,0,0,0} --last_count=100}",
+        "{SpeedL --vel={-0.01,0,0,0,0,0} --last_count=100}"
     };
 
     // ---- 连接机器人控制器 -------------------------------------------

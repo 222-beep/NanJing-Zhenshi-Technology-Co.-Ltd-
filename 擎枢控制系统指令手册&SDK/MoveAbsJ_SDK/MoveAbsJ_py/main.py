@@ -9,6 +9,7 @@ init_cmds = [
     "{Clear}",
     "{Disable}",
     "{Recover}",
+    "{Mode}",
     "{Enable}",
     "{Var --clear}",
     # "{Var --type=jointtarget --name=（变量名）

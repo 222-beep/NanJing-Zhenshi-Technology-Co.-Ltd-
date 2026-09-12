@@ -17,19 +17,22 @@ int main() {
     std::vector<std::string> init_cmds = {
         "{Clear}",
         "{Disable}",
-        "{SetUsingSP --state=on}",
+        "{Recover}",
+        "{Mode}",
         "{Enable}",
+        "{SetUsingSP --state=on}",
         "{Start}"
     };
 
     // MoveBlend 轨迹命令：first_insert 设置起点 -> insert_line/insert_circle 添加轨迹点 -> start 执行
     std::vector<std::string> moveblend_cmd = {
     //    "{MoveBlend --type=first_insert}  设置轨迹起点
-    //     {MoveBlend --type=insert_line   --robottarget_value={ x,y,z,q1,q2,q3,q4 } --zone={ 过渡区 } --speed=v50}
-    //     {MoveBlend --type=insert_circle --robottarget_value={...} --zone={...} --speed=v50}
+    //     {MoveBlend --type=insert_line   --robottarget_value={ x,y,z,q1,q2,q3,q4 } --zone={ 过渡区 } --speed=v50}  设置轨迹直线点
+    //     {MoveBlend --type=insert_circle --robottarget_value={...} --zone={...} --speed=v50}  设置轨迹圆弧点
     //     {MoveBlend --type=start}  启动轨迹执行"
         "{MoveBlend --type=first_insert}",
-        "{MoveBlend --type=insert_line --robottarget_value={0.32,-0.32,0.48,0,1,0,0} --zone={0.1,0.1} --speed=v50}",
+        "{MoveBlend --type=insert_line --robottarget_value={0.036,0,0.9,0,0,0,1} --zone={0.1,0.1} --speed=v50}",
+        "{MoveBlend --type=insert_line --robottarget_value={0.036,-0.068,0.9,0,0,0,1} --zone={0.1,0.1} --speed=v50}",
         "{MoveBlend --type=start}"
     };
 
@@ -61,8 +64,8 @@ int main() {
     //持续发送 10 组指令
     for(int i = 0; i < 10; ++i)
     {
-        send_rpcAsy(client, moveblend_cmd, 0, 10000);
-        delay_ms(200);
+        send_rpcAsy(client, moveblend_cmd, 0, 50000);
+        delay_ms(5000);
     }
 
     return 0;
