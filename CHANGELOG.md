@@ -8,9 +8,9 @@
 
 ### 同步 Gitee 更新（指令手册&SDK）
 
-- b327a4a 鏇存柊 C++ 鍜?Python RPC 鏂囦欢
-- bcbd003 鏇存柊 C++ 鍜?Python RPC 鏂囦欢
-- a1b768b 鏇存柊 C++ 鍜?Python RPC 鏂囦欢
+- b327a4a 更新 C++ 和 Python RPC 文件
+- bcbd003 更新 C++ 和 Python RPC 文件
+- a1b768b 更新 C++ 和 Python RPC 文件
 
 ## 2026-09-03
 
