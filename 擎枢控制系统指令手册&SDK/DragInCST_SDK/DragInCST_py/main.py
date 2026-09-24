@@ -33,6 +33,7 @@ dragincst_cmd = [
 # 退出 CST 拖拽，恢复到 CSP 位置模式
 exit_cmds = [
     "{Stop --last_count=10}",
+    "{Sleep --count=100}",
     "{SwitchToCSP}",
     "{Recover}",
     "{Start}"

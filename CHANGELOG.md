@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-09-24
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- 1b98353 Add sleep command to exit CST mode.
+- b097169 SDK中添加了MoveAbsJ配合发送独立线程Start和Stop指令的使用示例（Python）
+- e101de9 SDK中添加了MoveAbsJ配合发送独立线程Start和Stop指令的使用示例
+
 ## 2026-09-12
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -182,6 +190,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

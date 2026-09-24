@@ -41,6 +41,7 @@ int main() {
     // 退出 CST 拖拽，恢复到 CSP 位置模式
     std::vector<std::string> exit_cmds = {
         "{Stop --last_count=10}",
+        "{Sleep --count=100}",
         "{SwitchToCSP}",
         "{Recover}",
         "{Start}"
