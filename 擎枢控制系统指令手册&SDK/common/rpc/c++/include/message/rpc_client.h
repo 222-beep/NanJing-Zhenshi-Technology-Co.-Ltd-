@@ -351,7 +351,8 @@ inline std::future<bool> send_rpc_thread(cpp_rpc::CPPClient& client,
 //    5900端口不是普通字符串指令通道，只接受FastJointTargetParam固定二进制帧：
 //    5组机械臂 × 每组10个关节 × double，共400字节。
 //    每次调用只发送一帧，发送周期由调用方控制。
-//    使用前需通过5868普通RPC启动JogAnyJDirect。
+//    使用前需通过5868普通RPC启动JogAnyJFast，并设置--index=0。
+//    目标必须持续刷新，停止发送后不应认为机械臂会继续运动到目标位置。
 //
 //  返回值：
 //    Ok(0) / NotConnected(-1) / SendFailed(-2) / TimedOut(-3)

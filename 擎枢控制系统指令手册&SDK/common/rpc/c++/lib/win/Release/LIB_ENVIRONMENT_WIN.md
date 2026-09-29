@@ -112,7 +112,8 @@ dumpbin /dependents cpp_rpc.dll
 - 本库使用 MSVC 的新预处理器 (`/Zc:preprocessor`)，调用方应使用 Visual Studio 2019 16.6 或更高版本
 - 编译时需启用 `/utf-8` 选项以确保中文字符正常处理
 - 5900实时通道只接受`FastJointTargetParam`固定二进制帧（5组机械臂×10个关节，共400字节），不接受普通字符串指令
-- 使用5900实时通道前，需先通过5868普通RPC启动`JogAnyJDirect`
+- 使用5900实时通道前，需先通过5868普通RPC启动`JogAnyJFast`并设置`--index=0`
+- 5900关节目标需要持续刷新；发送持续时间应足以让机械臂到达目标，停止发送后不应认为机械臂会继续运动到位
 
 ---
 
