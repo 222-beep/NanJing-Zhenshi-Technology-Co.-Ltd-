@@ -53,7 +53,7 @@ stop_cmd = "{Stop}"
 def send_stop_after(client, cmd, delay_s):
     """独立线程中执行：先延时 delay_s 秒等机器人动起来，再发送 Stop 打断阻塞中的运动"""
     time.sleep(delay_s)
-    return send_rpc_thread(client, cmd, timeout_ms=10000, debug=True).result()
+    return send_rpc_thread(client, cmd).result()
 
 
 def main():
@@ -68,8 +68,8 @@ def main():
     #  示例 1：通用同步 RPC 发送初始化指令
     #  返回值只有 return_code / subcmd_index / return_message
     # ==================================================================
-    #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：Start / Stop 独立线程发送，运动指令主线程同步发送
@@ -81,7 +81,7 @@ def main():
     # ==================================================================
 
     # 在独立线程中发送 Start，并等待其返回，保证 Start 先于运动指令到达
-    start_future = send_rpc_thread(client, start_cmd, timeout_ms=10000, debug=True)
+    start_future = send_rpc_thread(client, start_cmd)
     print(f"Start sent: {'ok' if start_future.result() else 'failed'}")
 
     with ThreadPoolExecutor(max_workers=1) as executor:
@@ -89,8 +89,8 @@ def main():
         stop_future = executor.submit(send_stop_after, client, stop_cmd, 1.0)
 
         # 主线程同步发送运动指令（阻塞，期间会被上面的 Stop 打断）
-        #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-        send_rpcsy(client, moveabsj_cmd, sleep_s=0.2, timeout_ms=50000)
+        #  send_rpcsy(client, cmds, sleep_s=间隔秒)
+        send_rpcsy(client, moveabsj_cmd, sleep_s=0.2)
 
         # 等待独立线程的 Stop 发送结果
         print(f"Stop sent: {'ok' if stop_future.result() else 'failed'}")

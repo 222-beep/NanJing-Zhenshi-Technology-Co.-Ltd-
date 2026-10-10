@@ -76,12 +76,12 @@ def main():
     if drag_cmds is None:
         raise ValueError(f"未知 DRAG_MODE: {DRAG_MODE}")
 
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     try:
         # ForcePositionHybridControl 是持续型控制，不要在 while True 里一直重复发
         # 发一次异步指令即可
-        send_rpc_async(client, drag_cmds, timeout_ms=86400000, wait_s=0.1)
+        send_rpc_async(client, drag_cmds, wait_s=0.1)
 
         # 保持程序运行，等待 Ctrl+C
         while True:
@@ -93,7 +93,7 @@ def main():
     finally:
         # 退出时一定要 Stop，不然力控可能还在执行
         try:
-            send_rpcsy(client, stop_cmds, sleep_s=0.1, timeout_ms=50000)
+            send_rpcsy(client, stop_cmds, sleep_s=0.1)
             print("Stop command sent.")
         except Exception as exc:
             print(f"Failed to send Stop: {exc}")

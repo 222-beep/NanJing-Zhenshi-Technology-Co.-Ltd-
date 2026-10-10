@@ -127,7 +127,7 @@ def sine_motion_loop(client):
         # 构造 JogAnyJ 指令并异步发送
         joint_pos = make_joint_pos(x_rad, NUM_JOINTS)
         cmd = make_jog_cmd(joint_pos, MOTION_ACC, MOTION_DEC, MOTION_VEL, MOTION_LAST_COUNT)
-        send_rpc_async(client, [cmd], wait_s=0.02, timeout_ms=600000)
+        send_rpc_async(client, [cmd], wait_s=0.02)
 
         # 维持 100Hz 下发节奏
         time.sleep(SINE_DT)
@@ -173,7 +173,7 @@ def main():
         return
 
     # 执行初始化命令序列（Clear → Disable → Recover → Mode → Enable → Start）
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # 主循环
     while True:
@@ -198,7 +198,7 @@ def main():
         elif user_input == "stop":
             running = False
             time.sleep(0.1)
-            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1, timeout_ms=50000)
+            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1)
             print("运动已停止")
 
         elif user_input == "custom":
@@ -221,7 +221,7 @@ def main():
                 custom_cmd = make_jog_cmd(joint_pos, START_ACC, START_DEC, START_VEL, START_LAST_COUNT)
                 print(f"执行指令: {custom_cmd}")
 
-                send_rpcsy(client, [custom_cmd], sleep_s=0.1, timeout_ms=50000)
+                send_rpcsy(client, [custom_cmd], sleep_s=0.1)
 
             except ValueError:
                 print("输入格式错误，请确保输入的是数字")
@@ -232,7 +232,7 @@ def main():
             print("退出程序...")
             running = False
             time.sleep(0.1)
-            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1, timeout_ms=50000)
+            send_rpcsy(client, jog_stop_cmds, sleep_s=0.1)
             break
 
         else:

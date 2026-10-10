@@ -55,7 +55,7 @@
 │                   ├── x86/                  #       x86: libprotobuf.so.32, libzmq.so.5, cp310/topic.so
 │                   └── arm/                  #       ARM: 同上
 │
-├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动
+├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动（另有独立线程 Start/Stop 变体）
 ├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
 ├── MoveBlend_SDK/                          # SD-03  笛卡尔轨迹混合运动（直线+圆弧）
 ├── MoveS_SDK/                              # SD-04  S 曲线笛卡尔轨迹运动
@@ -85,7 +85,7 @@
 
 | 编号 | SDK | 功能 | 示例结构 |
 |------|-----|------|----------|
-| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 同步初始化 + 异步循环运动 |
+| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 同步初始化 + 异步循环运动（另有独立线程 Start/Stop 变体） |
 | SD-02 | MoveAbsJ_Double | 双臂关节空间绝对位置运动 | 同步初始化 + 异步循环运动 |
 | SD-03 | MoveBlend | 笛卡尔空间混合轨迹（直线+圆弧） | 同步初始化 + 异步循环运动 |
 | SD-04 | MoveS | 笛卡尔空间 S 曲线轨迹 | 同步初始化 + 异步循环运动（另有 EGM 偏移变体） |
@@ -215,7 +215,7 @@ HTTP MJPEG，不使用相机 Topic。图片 observation 格式为 `RGB/HWC/numpy
 
 ### 标准 RPC SDK 编译
 
-以 MoveAbsJ 为例，其余 15 个标准 SDK 编译方式完全一致。
+以 MoveAbsJ 为例，其余 15 个标准 SDK 编译方式完全一致。MoveAbsJ 额外提供独立线程 Start/Stop 示例，编译产生第二个目标 `Hello_MoveAbsJ_ThreadStop`（源码 `src/main_thread_start_stop.cpp`）。
 
 **Windows：**
 
@@ -341,21 +341,25 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 |------|----------|-------------|----------|
 | 同步 | `send_rpcsy<RespDemo>()` | `send_rpcsy()` | 初始化、IO/读写等离散指令，需等待响应确认 |
 | 异步 | `send_rpcAsy()` | `send_rpc_async()` | 运动指令 for 循环持续下发、SpeedL 在线规划、持续型控制 |
+| 独立线程 | `send_rpc_thread()` | `send_rpc_thread()` | 主线程被同步运动指令阻塞时，从独立线程发送 Start/Stop 等指令（如安全中断运动） |
 
-- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。所有示例的同步发送超时统一为 **50000ms**。
+- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。**示例均省略超时实参**（与 send_commend_c 风格一致），直接使用封装层默认值——同步/异步 864000000ms（约 10 天，实际等于始终等待响应）、独立线程 `send_rpc_thread` 10000ms；如需自定义可在调用末尾显式传入。C++ 侧 `send_rpcsy` 还支持 `response_callback`（逐条响应回调）与 `timing_callback`（RPC 耗时统计，`RpcTimingInfo` 含 born/return 时间、服务端处理耗时与客户端 RTT）。
 - **异步 RPC**：快速下发指令后立即返回，不阻塞等待。适合 SpeedL 在线规划、ForcePositionHybridControl 持续力控等场景。
-- **统一示例结构**：标准运动类 SDK 示例（main.cpp / main.py）统一为两段式：示例 1 同步发送 init_cmds 初始化，示例 2 异步 for 循环持续发送运动指令（循环 10 次，每次间隔 200ms）。
-- **init_cmds 统一约定**：`{Clear}` → `{Disable}` → [`{SetUsingSP --state=on}` 仅笛卡尔运动] → `{Recover}`（仅一个） → `{Enable}` → `{Var --clear}` 及变量定义 → `{Start}`。
+- **独立线程 RPC**：主线程用 `send_rpcsy` 同步发送运动指令时会阻塞（直到运动执行完或被打断），因此打断用的 `{Stop}` 必须放到独立线程发送。MoveAbsJ 提供完整示例 `main_thread_start_stop.cpp` / `main_thread_start_stop.py`：Start 独立线程发送后先 `.get()`/`result()` 等待返回（保证 Start 先于运动指令到达），Stop 由独立线程延时 1s 后发送以打断阻塞中的运动。
+- **统一示例结构**：标准运动类 SDK 示例（main.cpp / main.py）统一为两段式：示例 1 同步发送 init_cmds 初始化，示例 2 异步 for 循环持续发送运动指令。循环次数与间隔按运动特性调整：多数 SDK 循环 10 次、间隔 200ms；MoveS / JogAnyJ 循环 3 次（等待单条轨迹跑完）；JogC / MoveBlend / MoveSeriesToppJ 间隔延长至 5000ms。
+- **init_cmds 统一约定**：`{Clear}` → `{Disable}` → `{Recover}` → `{Mode}` → `{Enable}` → [`{SetUsingSP --state=on}` 仅笛卡尔运动] → `{Var --clear}` 及变量定义（如有） → `{Start}`。
 - **{SetUsingSP --state=on}**：开启最优求解器，专为笛卡尔空间运动适配，仅笛卡尔运动类 SDK（MoveS/MoveBlend/JogC/JogAnyC/DragInCST/SpeedL/力位混合控制）需要，关节运动类（MoveAbsJ/JogAnyJ/MoveSeriesToppJ 及双臂版本）与非运动类（IO/ReadPdo/ReadSdo/SubLoop）不需要。
-- **Stop 指令**：仅在需要显式停止的场景保留（EGM 偏移独立线程打断、力位混合控制 Ctrl+C 退出、DragInCST 退出拖拽模式、main-sine 交互式停止），其余示例依靠指令自然结束或 Ctrl+C 中断。
+- **Stop 指令**：仅在需要显式停止的场景保留（MoveAbsJ 独立线程 Start/Stop 打断、EGM 偏移独立线程打断、力位混合控制 Ctrl+C 退出、DragInCST 退出拖拽模式、main-sine 交互式停止），其余示例依靠指令自然结束或 Ctrl+C 中断。
+- **DragInCST 退出序列**：退出 CST 拖拽时在 `{Stop --last_count=10}` 与 `{SwitchToCSP}` 之间插入 `{Sleep --count=100}`，等待停止生效后再切回 CSP 位置模式。
+- **SyncAsync SpeedL 参数**：异步示例中 SpeedL 的 `--last_count` 为 **100**（原 1000），缩短单条指令执行周期以便观察同步/异步差异。
 - **SubLoop 特殊要求**：第一条指令**必须**使用异步发送，且 timeout 要足够大。
-- **带扩展字段的响应**：ReadPdo / ReadSdo 指令的返回值带 `pdo_value` / `sdo_value` 扩展字段，C++ 侧使用 `send_rpcsy<RespPdo>()` / `send_rpcsy<RespSdo>()` 解析（类型定义见 `resp_dto.h`）；Python 侧通过 `CallAwaitRaw` 获取原始 JSON 后自行解析。
+- **带扩展字段的响应**：ReadPdo / ReadSdo 指令的返回值带 `pdo_value` / `sdo_value` 扩展字段，C++ 侧用 `send_rpcsy<RespPdo>()` / `send_rpcsy<RespSdo>()` 解析并**从返回的 `vector` 中读取** `pdo_value`/`sdo_value`（类型定义见 `resp_dto.h`）；Python 侧通过 `CallAwaitRaw` 获取原始 JSON 后自行解析。
 
 ### 3. 超时参数单位
 
 | 参数 | C++ | Python |
 |------|-----|--------|
-| `timeout_ms` | 毫秒 (ms)，同步发送统一为 50000 | 毫秒 (ms)，同步发送统一为 50000 |
+| `timeout_ms` | 毫秒 (ms)，示例省略，默认 864000000 | 毫秒 (ms)，示例省略，默认 864000000 |
 | `sleep_time_ms` | 毫秒 (ms) | — |
 | `sleep_s` / `wait_s` | — | 秒 (s) |
 
@@ -401,8 +405,9 @@ cmake .. ; cmake --build . --config Release
 
 | 文档 | 路径 |
 |------|------|
-| C++ 核心接口 | `common/rpc/c++/include/message/rpc_client.h` |
-| Python 核心接口 | `common/rpc/python/rpc_client.py` |
+| 指令手册（全量指令说明） | `指令手册-合-v1.7.5.pdf` |
+| C++ 核心接口（含 send_rpcsy / send_rpcAsy / send_rpc_thread） | `common/rpc/c++/include/message/rpc_client.h` |
+| Python 核心接口（含 send_rpcsy / send_rpc_async / send_rpc_thread） | `common/rpc/python/rpc_client.py` |
 | Topic 数据订阅 API | `Topic_SDK/topic_c++/API.md` |
 | 力位混合控制说明 | `ForcePositionHybridControl_SDK/ForcePositionHybridControl_linux_c++例程使用说明-v1.5.2.pdf` |
 | 力位混合控制 Python 说明 | `ForcePositionHybridControl_SDK/ForcePositionHybridControl_linux_python例程使用说明-v1.5.2.pdf` |

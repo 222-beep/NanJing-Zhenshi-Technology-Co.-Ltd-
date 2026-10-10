@@ -47,16 +47,16 @@ def main():
     #  返回值只有 return_code / subcmd_index / return_message
     #  执行初始化 + MoveAbsJ 同步运动序列
     # ==================================================================
-    #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
-    send_rpcsy(client, sync_cmd, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
+    send_rpcsy(client, sync_cmd, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     #  SpeedL 在线规划往返
     # ==================================================================
-    #  send_rpc_async(client, cmds, wait_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpc_async(client, async_cmd, wait_s=0, timeout_ms=10000)
+    #  send_rpc_async(client, cmds, wait_s=间隔秒)
+    send_rpc_async(client, async_cmd, wait_s=0)
 
 
 # 程序入口

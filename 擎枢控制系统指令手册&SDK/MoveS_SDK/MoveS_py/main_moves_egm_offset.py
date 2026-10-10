@@ -47,21 +47,21 @@ def main():
         return
 
     # 示例 1：通用同步 RPC（最常见用法）
-    #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
-    send_rpcsy(client, moves_cmds, sleep_s=0.5, timeout_ms=50000)
+    #  send_rpcsy(client, cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
+    send_rpcsy(client, moves_cmds, sleep_s=0.5)
 
     # 示例 2：独立线程发送（send_rpc_thread，见 rpc_client.py）
     # 在独立线程中发送，不阻塞当前线程，返回 Future，
     # 可在之后任意时机 .result() 获取发送结果
     # 在独立线程中发送 SetEgmOffset 进行在线偏移
-    setegmoffset_future = send_rpc_thread(client, setegmoffset_cmd, timeout_ms=10000, debug=True)
+    setegmoffset_future = send_rpc_thread(client, setegmoffset_cmd)
 
     # 两个独立线程发送之间加延时，保证 SetEgmOffset 先于 Stop 到达
     time.sleep(0.5)
 
     # 在独立线程中发送 Stop 停止运动
-    stop_future = send_rpc_thread(client, stop_cmd, timeout_ms=10000, debug=True)
+    stop_future = send_rpc_thread(client, stop_cmd)
 
     # 等待两个独立线程的发送结果
     print(f"SetEgmOffset sent: {'ok' if setegmoffset_future.result() else 'failed'}")

@@ -62,30 +62,30 @@ int main() {
     //  返回值只有 return_code / subcmd_index / return_message
     //  执行初始化
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
 
     // 切换到 CST 拖拽模式（同步下发一次）
-    send_rpcsy<RespDemo>(client, switch_cst_cmd, 100, 50000);
+    send_rpcsy<RespDemo>(client, switch_cst_cmd, 100);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     //  for 循环持续发送 DragInCST 保持拖拽状态
     // ==================================================================
-    //  send_rpcAsy(client, dragincst_cmd, 间隔ms, 超时ms)
+    //  send_rpcAsy(client, dragincst_cmd, 间隔ms)
 
     //持续发送 10 组指令
     for(int i = 0; i < 10; ++i)
     {
-        send_rpcAsy(client, dragincst_cmd, 0, 10000);
+        send_rpcAsy(client, dragincst_cmd, 0);
         delay_ms(200);
     }
 
     // ==================================================================
     //  退出 CST 拖拽模式，恢复到 CSP 位置模式
     // ==================================================================
-    send_rpcsy<RespDemo>(client, exit_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, exit_cmds, 100);
 
     return 0;
 }

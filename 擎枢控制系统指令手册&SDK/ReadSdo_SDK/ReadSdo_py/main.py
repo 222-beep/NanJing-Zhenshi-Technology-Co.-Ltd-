@@ -26,24 +26,21 @@ readsdo_cmd = [
 ]
 
 
-def send_readsdo_raw(client: RpcClient, cmd: str, timeout_ms: int = 50000):
-    """用 CallAwaitRaw 同步发送 ReadSdo，返回原始 JSON（含 sdo_value 等全部字段）"""
+def send_readsdo_raw(client: RpcClient, cmd: str):
+    """用 call_await_raw_msg 同步发送 ReadSdo，返回原始 JSON（含 sdo_value 等全部字段）"""
     msg, seq_id = client._new_msg_with_seq(cmd)
     print(f"\nsend[seq={seq_id}]: {cmd}")
-    status, raw_msg = client.inner.CallAwaitRaw(msg, timeout_ms)
+    status, response_msg = client.call_await_raw_msg(msg)
     if status != 0:
         print(f"[SYNC] Failed: '{cmd}'  status={status}")
         if not client.is_connected():
             print(f"[SYNC] Connection lost: {client.error_info()}")
         return None
 
-    # Python 版 CallAwaitRaw 第二个返回值直接是响应体字符串
-    body = raw_msg
+    # call_await_raw_msg 返回完整响应 Msg，toString() 得到响应体 JSON 字符串
+    body = response_msg.toString()
     if isinstance(body, (bytes, bytearray)):
         body = bytes(body).decode('utf-8', errors='replace')
-    elif hasattr(body, 'data'):
-        data = body.data()
-        body = bytes(data).decode('utf-8', errors='replace') if isinstance(data, (bytes, bytearray)) else str(data)
     try:
         return json.loads(body)
     except (json.JSONDecodeError, TypeError):
@@ -64,8 +61,8 @@ def main():
     #  示例 1：通用同步 RPC（最常见用法）
     #  执行初始化
     # ==================================================================
-    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：扩展返回值同步 RPC

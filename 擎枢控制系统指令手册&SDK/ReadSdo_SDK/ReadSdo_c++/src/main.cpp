@@ -47,18 +47,27 @@ int main() {
     //  返回值只有 return_code / subcmd_index / return_message
     //  执行初始化
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
 
     // ==================================================================
     //  示例 2：扩展返回值同步 RPC
     //  ReadSdo 使用专用响应类型 RespSdo，额外返回 sdo_value 字段
-    //  debug=true 时由头文件 RespPrinter<RespSdo> 自动打印 sdo_value
+    //  send_rpcsy 返回 std::vector<RespSdo>，直接从返回值读取 sdo_value
     // ==================================================================
-    //  send_rpcsy<RespSdo>(client, readsdo_cmd, 间隔ms, 超时ms, debug=true)
+    //  send_rpcsy<RespSdo>(client, readsdo_cmd, 间隔ms)
 
-    send_rpcsy<RespSdo>(client, readsdo_cmd, 100, 50000, true);
+    auto sdo_results = send_rpcsy<RespSdo>(client, readsdo_cmd, 100);
+    for (const auto& r : sdo_results) {
+        std::cout << "subcmd_index:" << r.subcmd_index << std::endl;
+        std::cout << "return_code:" << r.return_code << std::endl;
+        std::cout << "return_message:" << r.return_message << std::endl;
+        if (r.has_sdo_value) {
+            std::cout << "sdo_value:" << r.sdo_value
+                      << " (0x" << std::hex << r.sdo_value << std::dec << ")" << std::endl;
+        }
+    }
 
     return 0;
 }

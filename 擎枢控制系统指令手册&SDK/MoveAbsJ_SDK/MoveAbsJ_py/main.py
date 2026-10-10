@@ -42,19 +42,19 @@ def main():
     #  返回值只有 return_code / subcmd_index / return_message
     #  执行初始化
     # ==================================================================
-    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     #  for 循环持续发送 MoveAbsJ
     #  依次运动到 j1 -> j2 -> j0
     # ==================================================================
-    #  send_rpc_async(client, moveabsj_cmd, wait_s=间隔秒, timeout_ms=超时毫秒)
+    #  send_rpc_async(client, moveabsj_cmd, wait_s=间隔秒)
 
     # 持续发送 10 组指令
     for _ in range(10):
-        send_rpc_async(client, moveabsj_cmd, wait_s=0, timeout_ms=10000)
+        send_rpc_async(client, moveabsj_cmd, wait_s=0)
         time.sleep(0.2)
 
 

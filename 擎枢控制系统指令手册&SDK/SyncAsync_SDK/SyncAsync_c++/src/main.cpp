@@ -57,18 +57,18 @@ int main() {
     //  返回值只有 return_code / subcmd_index / return_message
     //  执行初始化 + MoveAbsJ 同步运动序列
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
-    send_rpcsy<RespDemo>(client, sync_cmd, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
+    send_rpcsy<RespDemo>(client, sync_cmd, 100);
 
     // ==================================================================
     //  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     //  SpeedL 在线规划往返
     // ==================================================================
-    //  send_rpcAsy(client, cmds, 间隔ms, 超时ms)
+    //  send_rpcAsy(client, cmds, 间隔ms)
 
-    send_rpcAsy(client, async_cmd, 0, 10000);
+    send_rpcAsy(client, async_cmd, 0);
 
     return 0;
 }

@@ -53,27 +53,27 @@ def main():
     #  返回值只有 return_code / subcmd_index / return_message
     #  执行初始化
     # ==================================================================
-    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # 切换到 CST 拖拽模式（同步下发一次）
-    send_rpcsy(client, switch_cst_cmd, sleep_s=0.1, timeout_ms=50000)
+    send_rpcsy(client, switch_cst_cmd, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
     #  for 循环持续发送 DragInCST 保持拖拽状态
     # ==================================================================
-    #  send_rpc_async(client, dragincst_cmd, wait_s=间隔秒, timeout_ms=超时毫秒)
+    #  send_rpc_async(client, dragincst_cmd, wait_s=间隔秒)
 
     # 持续发送 10 组指令
     for _ in range(10):
-        send_rpc_async(client, dragincst_cmd, wait_s=0, timeout_ms=10000)
+        send_rpc_async(client, dragincst_cmd, wait_s=0)
         time.sleep(0.2)
 
     # ==================================================================
     #  退出 CST 拖拽模式，恢复到 CSP 位置模式
     # ==================================================================
-    send_rpcsy(client, exit_cmds, sleep_s=0.1, timeout_ms=50000)
+    send_rpcsy(client, exit_cmds, sleep_s=0.1)
 
 
 # 程序入口

@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-10
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- 5319e3f SDK中添加了JogAnyJFast进入快速运动模式的使用示例（C++/Python）
+- 3f0dca2 Merge branch 'master' of https://gitee.com/zhenshi-controller-api-data/hello_demo_example
+- e46334d SDK中添加了JogAnyJFast快速关节点动使用示例（C++/Python） - 新增 JogAnyJFast_SDK/JogAnyJFast_c++：5868 初始化并异步进入快速运动模式，   5900 实时通道以 1ms 周期持续下发关节目标帧，帧内 count 随发送递增；   CMakeLists 与现有示例保持一致 - 新增 JogAnyJFast_SDK/JogAnyJFast_py：同流程 Python 版，   经 RealtimeRpcClient 下发 5900 目标帧，目标以度数填写自动转弧度
+- edd231a 异步同步发送隐藏了超时时间
+- a4ad510 更新 C++ 和 Python RPC 文件
+
 ## 2026-09-29
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -198,6 +208,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

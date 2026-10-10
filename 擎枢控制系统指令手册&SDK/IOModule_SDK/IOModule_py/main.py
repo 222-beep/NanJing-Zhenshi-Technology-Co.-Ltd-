@@ -50,17 +50,17 @@ def main():
     #  返回值只有 return_code / subcmd_index / return_message
     #  执行初始化
     # ==================================================================
-    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, init_cmds, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, init_cmds, sleep_s=间隔秒)
+    send_rpcsy(client, init_cmds, sleep_s=0.1)
 
     # ==================================================================
     #  示例 2：通用同步 RPC 依次执行 IO 操作
     #  GetDI 读取数字输入 -> SetDO 设置数字输出 -> DOPulse 输出脉冲
     # ==================================================================
-    #  send_rpcsy(client, cmds, sleep_s=间隔秒, timeout_ms=超时毫秒)
-    send_rpcsy(client, getdi_cmd, sleep_s=0.1, timeout_ms=50000)
-    send_rpcsy(client, setdo_cmd, sleep_s=0.1, timeout_ms=50000)
-    send_rpcsy(client, dopulse_cmd, sleep_s=0.1, timeout_ms=50000)
+    #  send_rpcsy(client, cmds, sleep_s=间隔秒)
+    send_rpcsy(client, getdi_cmd, sleep_s=0.1)
+    send_rpcsy(client, setdo_cmd, sleep_s=0.1)
+    send_rpcsy(client, dopulse_cmd, sleep_s=0.1)
 
 
 # 程序入口

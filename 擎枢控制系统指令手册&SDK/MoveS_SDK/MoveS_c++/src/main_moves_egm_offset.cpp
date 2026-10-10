@@ -56,9 +56,9 @@ int main() {
     //  示例 1：通用同步 RPC（最常见用法）
     //  返回值只有 return_code / subcmd_index / return_message
     // ==================================================================
-    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
-    send_rpcsy<RespDemo>(client, moves_cmds, 500, 50000);
+    // 可选参数: send_rpcsy<RespDemo>(client, cmds, 间隔ms)
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
+    send_rpcsy<RespDemo>(client, moves_cmds, 500);
 
     // ==================================================================
     //  示例 2：独立线程发送（send_rpc_thread，见 rpc_client.h）
@@ -66,13 +66,13 @@ int main() {
     //  返回 std::future<bool>，可在之后任意时机 .get() 获取发送结果
     // ==================================================================
     // 在独立线程中发送 SetEgmOffset 进行在线偏移
-    auto setegmoffset_future = send_rpc_thread(client, setegmoffset_cmd, 10000, true);
+    auto setegmoffset_future = send_rpc_thread(client, setegmoffset_cmd);
 
     // 两个独立线程发送之间加延时，保证 SetEgmOffset 先于 Stop 到达
     delay_ms(500);
 
     // 在独立线程中发送 Stop 停止运动
-    auto stop_future = send_rpc_thread(client, stop_cmd, 10000, true);
+    auto stop_future = send_rpc_thread(client, stop_cmd);
 
     // 等待两个独立线程的发送结果
     std::cout << "SetEgmOffset sent: " << (setegmoffset_future.get() ? "ok" : "failed") << std::endl;

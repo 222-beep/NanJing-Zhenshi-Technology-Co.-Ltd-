@@ -57,19 +57,19 @@ int main() {
     //  返回值只有 return_code / subcmd_index / return_message
     //  执行初始化
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, init_cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
 
     // ==================================================================
     //  示例 2：通用同步 RPC 依次执行 IO 操作
     //  GetDI 读取数字输入 -> SetDO 设置数字输出 -> DOPulse 输出脉冲
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, getdi_cmd, 100, 50000);
-    send_rpcsy<RespDemo>(client, setdo_cmd, 100, 50000);
-    send_rpcsy<RespDemo>(client, dopulse_cmd, 100, 50000);
+    send_rpcsy<RespDemo>(client, getdi_cmd, 100);
+    send_rpcsy<RespDemo>(client, setdo_cmd, 100);
+    send_rpcsy<RespDemo>(client, dopulse_cmd, 100);
 
     return 0;
 }

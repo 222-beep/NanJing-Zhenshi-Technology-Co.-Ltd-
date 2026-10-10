@@ -40,7 +40,7 @@ def set_camera_streaming(client, enabled):
         f"{{{command} --camera_sensor={sensor}}}"
         for sensor in CAMERA_SENSORS.values()
     ]
-    send_rpcsy(client, commands, timeout_ms=10000, sleep_s=0.1, debug=True)
+    send_rpcsy(client, commands, sleep_s=0.1, debug=True)
 
 
 def print_observation(observation):

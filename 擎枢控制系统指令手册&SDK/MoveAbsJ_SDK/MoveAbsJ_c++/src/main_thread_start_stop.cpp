@@ -70,9 +70,9 @@ int main() {
     //  示例 1：通用同步 RPC 发送初始化指令
     //  返回值只有 return_code / subcmd_index / return_message
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
 
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
 
     // ==================================================================
     //  示例 2：Start / Stop 独立线程发送，运动指令主线程同步发送
@@ -84,18 +84,18 @@ int main() {
     // ==================================================================
 
     // 在独立线程中发送 Start，并等待其返回，保证 Start 先于运动指令到达
-    auto start_future = send_rpc_thread(client, start_cmd, 10000, true);
+    auto start_future = send_rpc_thread(client, start_cmd);
     std::cout << "Start sent: " << (start_future.get() ? "ok" : "failed") << std::endl;
 
     // 独立线程：延时 1s 后发送 Stop，用于打断下面阻塞中的运动
     auto stop_future = std::async(std::launch::async, [&client, stop_cmd]() {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        return send_rpc_thread(client, stop_cmd, 10000, true).get();
+        return send_rpc_thread(client, stop_cmd).get();
     });
 
     // 主线程同步发送运动指令（阻塞，期间会被上面的 Stop 打断）
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, 超时ms)
-    send_rpcsy<RespDemo>(client, motion_cmds, 200, 50000);
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
+    send_rpcsy<RespDemo>(client, motion_cmds, 200);
 
     // 等待独立线程的 Stop 发送结果
     std::cout << "Stop sent: " << (stop_future.get() ? "ok" : "failed") << std::endl;

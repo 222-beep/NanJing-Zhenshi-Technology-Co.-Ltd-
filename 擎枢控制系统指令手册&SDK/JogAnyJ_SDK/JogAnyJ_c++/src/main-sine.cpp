@@ -182,7 +182,7 @@ void sine_motion_loop(cpp_rpc::CPPClient& client) {
         string cmd = make_jog_cmd(joint_pos, MOTION_ACC, MOTION_DEC, MOTION_VEL, MOTION_LAST_COUNT);
 
         vector<string> cmds = { cmd };
-        send_rpcAsy(client, cmds, 20, 600000);
+        send_rpcAsy(client, cmds, 20);
     }
 
     csv_file.close();
@@ -226,7 +226,7 @@ int main() {
     cpp_rpc::CPPClient client(ROBOT_IP, ROBOT_PORT);
 
     // 执行初始化命令序列（Clear → Disable → Recover → Mode → Enable → Start）
-    send_rpcsy<RespDemo>(client, init_cmds, 100, 50000);
+    send_rpcsy<RespDemo>(client, init_cmds, 100);
 
     // 主循环
     while (true) {
@@ -254,7 +254,7 @@ int main() {
         else if (input == "stop") {
             running = false;
             delay_ms(100);
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 50000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100);
             cout << "运动已停止\n";
         }
         else if (input == "custom") {
@@ -287,7 +287,7 @@ int main() {
                 cout << "执行指令: " << custom_cmd << endl;
 
                 vector<string> custom_cmds = { custom_cmd };
-                send_rpcsy<RespDemo>(client, custom_cmds, 100, 50000);
+                send_rpcsy<RespDemo>(client, custom_cmds, 100);
             }
             catch (const exception& e) {
                 cout << "输入格式错误，请确保输入的是数字\n";
@@ -298,7 +298,7 @@ int main() {
             cout << "退出程序...\n";
             running = false;
             delay_ms(100);
-            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100, 50000);
+            send_rpcsy<RespDemo>(client, jog_stop_cmds, 100);
             break;
         }
         else {
