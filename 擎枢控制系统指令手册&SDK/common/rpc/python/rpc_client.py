@@ -287,7 +287,7 @@ class RealtimeRpcClient:
 # ======================================================================
 
 def send_rpcsy(client: RpcClient, cmd_list: list, sleep_s: float = 0,
-               timeout_ms: int = DEFAULT_RPC_TIMEOUT_MS, debug: bool = False,
+               debug: bool = False, timeout_ms: int = DEFAULT_RPC_TIMEOUT_MS,
                response_callback=None, timing_callback=None):
     """
     逐条同步发送指令，等待响应后发下一条
@@ -296,8 +296,8 @@ def send_rpcsy(client: RpcClient, cmd_list: list, sleep_s: float = 0,
         client:   RpcClient 实例
         cmd_list: 指令字符串列表
         sleep_s:    指令间隔 (s)
-        timeout_ms: 每条超时 (ms)
         debug:      是否打印发送和返回信息
+        timeout_ms: 每条超时 (ms)
         response_callback: 可选回调，签名为 callback(status, resp_list, seq_id, cmd)
         timing_callback: 可选回调，签名为 callback(RpcTimingInfo)
     """
@@ -355,7 +355,7 @@ def send_rpcsy(client: RpcClient, cmd_list: list, sleep_s: float = 0,
 # ======================================================================
 
 def send_rpc_async(client: RpcClient, cmd_list: list, wait_s: float = 0.5,
-                   timeout_ms: int = DEFAULT_RPC_TIMEOUT_MS, debug: bool = False,
+                   debug: bool = False, timeout_ms: int = DEFAULT_RPC_TIMEOUT_MS,
                    response_callback=None, timing_callback=None):
     """
     逐条异步发送指令（不等响应）
@@ -364,8 +364,8 @@ def send_rpc_async(client: RpcClient, cmd_list: list, wait_s: float = 0.5,
         client:   RpcClient 实例
         cmd_list: 指令字符串列表
         wait_s:    指令间隔 (s)
-        timeout_ms: 每条超时 (ms)
         debug:      是否打印发送和返回信息
+        timeout_ms: 每条超时 (ms)
         response_callback: 可选回调，签名为 callback(status, resp_list, seq_id, cmd)
         timing_callback: 可选回调，签名为 callback(RpcTimingInfo)
     """
@@ -426,8 +426,9 @@ def send_rpc_async(client: RpcClient, cmd_list: list, wait_s: float = 0.5,
 # ======================================================================
 
 def send_rpc_thread(client: RpcClient, cmd: str,
+                    debug: bool = False,
                     timeout_ms: int = DEFAULT_RPC_TIMEOUT_MS,
-                    debug: bool = False, response_callback=None,
+                    response_callback=None,
                     timing_callback=None) -> Future:
     """
     在独立线程中发送任意指令。

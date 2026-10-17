@@ -225,7 +225,7 @@ struct RespPrinter<RespSdo> {
 //  };
 //
 //  // ---- 步骤 3：在 main.cpp 中使用 -------------------------------
-//  send_rpcsy<YourCmdResp>(client, cmds, 100, 500);
+//  send_rpcsy<YourCmdResp>(client, cmds, 100, false, 500);
 //
 //  // ---- 步骤 4：在代码中拿到返回值 -------------------------------
 //  auto res = client.CallAwait<YourCmdResp>(msg, timeout);

@@ -55,9 +55,13 @@ add_executable(Hello_MoveAbsJ src/main.cpp)
 # MoveAbsJ 同步初始化 + Start/运动/Stop 独立线程发送示例
 add_executable(Hello_MoveAbsJ_ThreadStop src/main_thread_start_stop.cpp)
 
+# MoveAbsJ 发送接口（send_rpcsy / send_rpcAsy）参数说明示例
+add_executable(Hello_MoveAbsJ_SendParams src/main_send_params.cpp)
+
 if(WIN32)
 target_link_libraries(Hello_MoveAbsJ cpp_rpc)
 target_link_libraries(Hello_MoveAbsJ_ThreadStop cpp_rpc)
+target_link_libraries(Hello_MoveAbsJ_SendParams cpp_rpc)
 
 # 编译后自动把 dll 复制到 exe 旁边（否则运行时会报"找不到 dll"）
 add_custom_command(TARGET Hello_MoveAbsJ POST_BUILD
@@ -72,8 +76,15 @@ add_custom_command(TARGET Hello_MoveAbsJ_ThreadStop POST_BUILD
         "$<TARGET_FILE_DIR:Hello_MoveAbsJ_ThreadStop>"
 )
 
+add_custom_command(TARGET Hello_MoveAbsJ_SendParams POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SDK_LIB_DIR}/cpp_rpc.dll"
+        "$<TARGET_FILE_DIR:Hello_MoveAbsJ_SendParams>"
+)
+
 elseif(UNIX)
 target_link_libraries(Hello_MoveAbsJ cpp_rpc pthread)
 target_link_libraries(Hello_MoveAbsJ_ThreadStop cpp_rpc pthread)
+target_link_libraries(Hello_MoveAbsJ_SendParams cpp_rpc pthread)
 
 endif()

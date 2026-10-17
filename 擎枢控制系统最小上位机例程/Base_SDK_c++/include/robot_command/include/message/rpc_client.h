@@ -86,8 +86,8 @@ inline void print_rpc_timing(const RpcTimingInfo& info) {
 //  通用同步 RPC（模板，支持扩展响应类型）
 //
 //  用法：
-//    send_rpcsy<RespDemo>(client, cmds, interval_ms, timeout_ms);
-//    send_rpcsy<PointChooseIDMoveResp>(client, cmds, interval_ms, timeout_ms);
+//    send_rpcsy<RespDemo>(client, cmds, interval_ms, debug, timeout_ms);
+//    send_rpcsy<PointChooseIDMoveResp>(client, cmds, interval_ms, debug, timeout_ms);
 //
 //  debug 默认 false，不打印发送和返回信息。
 //  response_callback 可选，签名：
@@ -98,8 +98,8 @@ template<typename RespType>
 auto send_rpcsy(cpp_rpc::CPPClient& client,
                 const std::vector<std::string>& cmd_cmd,
                 int sleep_num = 0,
-                int outim_num = 864000000,
                 bool debug = false,
+                int outim_num = 864000000,
                 std::function<void(int, const std::vector<RespType>&, int, const std::string&)> response_callback = nullptr,
                 std::function<void(const RpcTimingInfo&)> timing_callback = nullptr)
     -> std::vector<RespType> {
@@ -191,7 +191,7 @@ auto send_rpcsy(cpp_rpc::CPPClient& client,
 //  通用异步 RPC
 //
 //  用法：
-//    send_rpcAsy(client, cmds, wait_ms, timeout_ms);
+//    send_rpcAsy(client, cmds, wait_ms, debug, timeout_ms);
 //
 //  debug 默认 false，不打印发送和返回信息。
 //  response_callback 可选，签名：
@@ -201,8 +201,8 @@ auto send_rpcsy(cpp_rpc::CPPClient& client,
 inline void send_rpcAsy(cpp_rpc::CPPClient& client,
                         const std::vector<std::string>& cmd_cmd,
                         int wait_num = 0,
-                        int outim_num = 864000000,
                         bool debug = false,
+                        int outim_num = 864000000,
                         std::function<void(int, const core::Msg&, int, const std::string&)> response_callback = nullptr,
                         std::function<void(const RpcTimingInfo&)> timing_callback = nullptr) {
     for (const auto& cmd : cmd_cmd) {
@@ -282,8 +282,8 @@ inline void send_rpcAsy(cpp_rpc::CPPClient& client,
 
 inline std::future<bool> send_rpc_thread(cpp_rpc::CPPClient& client,
                                          std::string cmd,
-                                         int outim_num = 10000,
                                          bool debug = false,
+                                         int outim_num = 10000,
                                          std::function<void(int, const core::Msg&, int, const std::string&)> response_callback = nullptr,
                                          std::function<void(const RpcTimingInfo&)> timing_callback = nullptr) {
     return std::async(std::launch::async,

@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-17
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- fc4ce31 更新 C++ 和 Python RPC 文件
+- 96ee249 新增发送接口参数说明示例 `main_send_params`，C++/Python 双版本
+- 7b53276 新增发送接口参数说明示例 `MoveAbsJ_c++/src/main_send_params.cpp`
+- 5c81f82 超时时间和debug互换位置
+- 18c0304 更新 C++ 和 Python RPC 文件
+
 ## 2026-10-10
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -208,6 +218,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

@@ -55,7 +55,7 @@
 │                   ├── x86/                  #       x86: libprotobuf.so.32, libzmq.so.5, cp310/topic.so
 │                   └── arm/                  #       ARM: 同上
 │
-├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动（另有独立线程 Start/Stop 变体）
+├── MoveAbsJ_SDK/                           # SD-01  单臂关节绝对运动（另有独立线程 Start/Stop、发送接口参数说明变体）
 ├── MoveAbsJ_Double_SDK/                    # SD-02  双臂关节绝对运动
 ├── MoveBlend_SDK/                          # SD-03  笛卡尔轨迹混合运动（直线+圆弧）
 ├── MoveS_SDK/                              # SD-04  S 曲线笛卡尔轨迹运动
@@ -85,7 +85,7 @@
 
 | 编号 | SDK | 功能 | 示例结构 |
 |------|-----|------|----------|
-| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 同步初始化 + 异步循环运动（另有独立线程 Start/Stop 变体） |
+| SD-01 | MoveAbsJ | 关节空间绝对位置运动 | 同步初始化 + 异步循环运动（另有独立线程 Start/Stop、发送接口参数说明变体） |
 | SD-02 | MoveAbsJ_Double | 双臂关节空间绝对位置运动 | 同步初始化 + 异步循环运动 |
 | SD-03 | MoveBlend | 笛卡尔空间混合轨迹（直线+圆弧） | 同步初始化 + 异步循环运动 |
 | SD-04 | MoveS | 笛卡尔空间 S 曲线轨迹 | 同步初始化 + 异步循环运动（另有 EGM 偏移变体） |
@@ -215,7 +215,7 @@ HTTP MJPEG，不使用相机 Topic。图片 observation 格式为 `RGB/HWC/numpy
 
 ### 标准 RPC SDK 编译
 
-以 MoveAbsJ 为例，其余 15 个标准 SDK 编译方式完全一致。MoveAbsJ 额外提供独立线程 Start/Stop 示例，编译产生第二个目标 `Hello_MoveAbsJ_ThreadStop`（源码 `src/main_thread_start_stop.cpp`）。
+以 MoveAbsJ 为例，其余 15 个标准 SDK 编译方式完全一致。MoveAbsJ 额外提供两个变体示例，编译共三个目标：`Hello_MoveAbsJ_ThreadStop`（独立线程 Start/Stop，源码 `src/main_thread_start_stop.cpp`）与 `Hello_MoveAbsJ_SendParams`（发送接口实参说明，源码 `src/main_send_params.cpp`）。
 
 **Windows：**
 
@@ -270,6 +270,10 @@ Python SDK 无需编译，所有模块开箱即用。
 ```bash
 # 修改 main.py 中的 ROBOT_IP 为实际控制器 IP 后直接运行（示例默认已统一为 192.168.11.11）
 python MoveAbsJ_SDK/MoveAbsJ_py/main.py
+
+# MoveAbsJ 另有两个变体示例：独立线程 Start/Stop、发送接口实参说明
+python MoveAbsJ_SDK/MoveAbsJ_py/main_thread_start_stop.py
+python MoveAbsJ_SDK/MoveAbsJ_py/main_send_params.py
 ```
 
 RealSenseCamera 需要额外安装 `numpy` 和 `opencv-python`：
@@ -343,9 +347,10 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 | 异步 | `send_rpcAsy()` | `send_rpc_async()` | 运动指令 for 循环持续下发、SpeedL 在线规划、持续型控制 |
 | 独立线程 | `send_rpc_thread()` | `send_rpc_thread()` | 主线程被同步运动指令阻塞时，从独立线程发送 Start/Stop 等指令（如安全中断运动） |
 
-- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。**示例均省略超时实参**（与 send_commend_c 风格一致），直接使用封装层默认值——同步/异步 864000000ms（约 10 天，实际等于始终等待响应）、独立线程 `send_rpc_thread` 10000ms；如需自定义可在调用末尾显式传入。C++ 侧 `send_rpcsy` 还支持 `response_callback`（逐条响应回调）与 `timing_callback`（RPC 耗时统计，`RpcTimingInfo` 含 born/return 时间、服务端处理耗时与客户端 RTT）。
+- **同步 RPC**：逐条发送指令，每条等待控制器返回结果后再发下一条。**示例均省略超时实参**（与 send_commend_c 风格一致），独立线程 `send_rpc_thread` 10000ms；如需自定义，按「间隔 → debug → 超时」顺序在调用末尾显式传入（C++ 传超时必须同时写出 `debug`，Python 用关键字参数不受位置限制）。C++ 侧 `send_rpcsy` 还支持 `response_callback`（逐条响应回调）与 `timing_callback`（RPC 耗时统计，`RpcTimingInfo` 含 born/return 时间、服务端处理耗时与客户端 RTT）。
 - **异步 RPC**：快速下发指令后立即返回，不阻塞等待。适合 SpeedL 在线规划、ForcePositionHybridControl 持续力控等场景。
 - **独立线程 RPC**：主线程用 `send_rpcsy` 同步发送运动指令时会阻塞（直到运动执行完或被打断），因此打断用的 `{Stop}` 必须放到独立线程发送。MoveAbsJ 提供完整示例 `main_thread_start_stop.cpp` / `main_thread_start_stop.py`：Start 独立线程发送后先 `.get()`/`result()` 等待返回（保证 Start 先于运动指令到达），Stop 由独立线程延时 1s 后发送以打断阻塞中的运动。
+- **实参逐项说明**：MoveAbsJ 的 `main_send_params.cpp`（目标 `Hello_MoveAbsJ_SendParams`）与 `main_send_params.py` 把同步 `send_rpcsy` 与异步 `send_rpcAsy`（C++）/ `send_rpc_async`（Python）的每个实参拆开解释——`client`（共用的连接对象）、指令列表（按顺序逐条发）、指令间隔（C++ `sleep_num`/`wait_num` 为 ms，Python `sleep_s`/`wait_s` 为 s；只在指令之间插入延时，不是等待时长）、`debug`（封装层自动打印开关），以及 C++ 模板实参 `RespDemo`（决定返回值元素类型，Python 无此对应物）；两边均给出省略间隔、开启 debug 等等价写法与返回值读取示例，并列出跨语言差异（单位不同、`send_rpcAsy` 间隔默认 0 而 `send_rpc_async` 默认 0.5s、Python 返回值字段名为 code/index/message 且不包含扩展字段）。
 - **统一示例结构**：标准运动类 SDK 示例（main.cpp / main.py）统一为两段式：示例 1 同步发送 init_cmds 初始化，示例 2 异步 for 循环持续发送运动指令。循环次数与间隔按运动特性调整：多数 SDK 循环 10 次、间隔 200ms；MoveS / JogAnyJ 循环 3 次（等待单条轨迹跑完）；JogC / MoveBlend / MoveSeriesToppJ 间隔延长至 5000ms。
 - **init_cmds 统一约定**：`{Clear}` → `{Disable}` → `{Recover}` → `{Mode}` → `{Enable}` → [`{SetUsingSP --state=on}` 仅笛卡尔运动] → `{Var --clear}` 及变量定义（如有） → `{Start}`。
 - **{SetUsingSP --state=on}**：开启最优求解器，专为笛卡尔空间运动适配，仅笛卡尔运动类 SDK（MoveS/MoveBlend/JogC/JogAnyC/DragInCST/SpeedL/力位混合控制）需要，关节运动类（MoveAbsJ/JogAnyJ/MoveSeriesToppJ 及双臂版本）与非运动类（IO/ReadPdo/ReadSdo/SubLoop）不需要。
@@ -363,7 +368,12 @@ Topic SDK 的 Python 版本由 `platform_loader.py` 自动检测操作系统、�
 | `sleep_time_ms` | 毫秒 (ms) | — |
 | `sleep_s` / `wait_s` | — | 秒 (s) |
 
-> 注意：Python `send_rpcsy` 的实际签名为 `(client, cmd_list, sleep_s, timeout_ms)`，`sleep_s` 在前、`timeout_ms` 在后，与 C++ 位置顺序相反；示例均使用关键字参数调用，不受位置影响。
+> 注意：`debug` 已调到超时之前，C++ 与 Python 的可选参数位置顺序一致：
+>
+> - C++：`send_rpcsy<T>(client, cmds, 间隔ms, debug, 超时ms)`、`send_rpcAsy(client, cmds, 间隔ms, debug, 超时ms)`、`send_rpc_thread(client, cmd, debug, 超时ms)`
+> - Python：`send_rpcsy(client, cmd_list, sleep_s, debug, timeout_ms)`、`send_rpc_async(client, cmd_list, wait_s, debug, timeout_ms)`、`send_rpc_thread(client, cmd, debug, timeout_ms)`
+>
+> 两侧均为间隔在前（C++ 单位 ms、Python 单位 s），`debug` 在超时之前。C++ 需传超时时必须同时写出 `debug`（如 `send_rpcsy<RespDemo>(client, cmds, 100, true, 5000)`）；Python 示例均使用关键字参数调用，不受位置影响。
 
 ### 4. 指令集结构
 

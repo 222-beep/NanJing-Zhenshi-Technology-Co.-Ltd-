@@ -56,7 +56,7 @@ int main() {
     //  示例 1：通用同步 RPC
     //  经 5868 执行初始化
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, debug, 超时ms)：debug/超时为可选参数，按此顺序传入
 
     send_rpcsy<RespDemo>(rpc_client, init_cmds, 0);
 
@@ -64,7 +64,7 @@ int main() {
     if (!realtime.Connect()) {
         std::cerr << "5900 connection failed: "
             << realtime.LastError() << std::endl;
-        send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);
+        send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);  // 第 4 位为 debug，超时用默认值
         return 2;
     }
     send_rpcAsy(rpc_client, joganyjfast_cmd, 0);
@@ -110,7 +110,7 @@ int main() {
 
     // ---- 停止运动（5868）--------------------------------------------
 
-    send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);
+    send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);  // 第 4 位为 debug，超时用默认值
     std::cout << "Motion stopped." << std::endl;
 
     return result == cpp_rpc::RealtimeSendResult::Ok ? 0 : 3;
