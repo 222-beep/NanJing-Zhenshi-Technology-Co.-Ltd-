@@ -7,21 +7,16 @@
 
 // ==================================================================
 //  main  ——  JogAnyJFast 使用示例
-//
-//  JogAnyJFast 参数：
-//    --joint_vel   关节速度上限
-//    --joint_acc   关节加速度上限
-//    --joint_dec   关节减速度上限
-//    --last_count  末尾保持周期数
-//    --index       0:127.0.0.1的5900端口发送的指令，1：192.168.11.11的5900端口发送的指令
 // ==================================================================
 
 int main() {
 
-    //机器人IP地址
+	//机器人IP地址以及端口号
     const std::string robot_ip = "192.168.11.11";
+    //index=0时realtime_port = 5900，index=1时realtime_port = 5901
+    constexpr int realtime_port = 5900;
     std::cout << "Robot IP: " << robot_ip << std::endl;
-
+    int jog_cmd_count = 0;
     // ---- 命令定义 --------------------------------------------------
 
     std::vector<std::string> init_cmds = {
@@ -34,7 +29,13 @@ int main() {
     };
 
     std::vector<std::string> joganyjfast_cmd = {
-            "{JogAnyJFast --joint_vel={1.0} --joint_acc={1.0} --joint_dec={1.0} --last_count=10000 --index=0}"
+//          JogAnyJFast 参数：
+//              --joint_vel   关节运动速度（rad/s）
+//              --joint_acc   关节加速度（rad/s²）
+//              --joint_dec   关节减速度（rad/s²）
+//              --last_count  末尾保持周期数
+//              --index       0:127.0.0.1的5900端口发送的指令，1：192.168.11.11的5901端口发送的指令
+            "{JogAnyJFast --joint_vel={1.0} --joint_acc={1.0} --joint_dec={1.0} --last_count=5000 --index=0}"
     };
 
     std::vector<std::string> stop_cmds = {
@@ -56,22 +57,24 @@ int main() {
     //  示例 1：通用同步 RPC
     //  经 5868 执行初始化
     // ==================================================================
-    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms, debug, 超时ms)：debug/超时为可选参数，按此顺序传入
-
+    //  send_rpcsy<RespDemo>(client, cmds, 间隔ms)
     send_rpcsy<RespDemo>(rpc_client, init_cmds, 0);
-
-    cpp_rpc::RealtimeChannel realtime(robot_ip); // 默认端口 5900
+    // ==================================================================
+    //  示例 2：通用异步 RPC
+    // ==================================================================
+    //  send_rpcAsy<RespDemo>(client, cmds, 间隔ms)
+    send_rpcAsy(rpc_client, joganyjfast_cmd, 0);
+    jog_cmd_count++;
+   
+    cpp_rpc::RealtimeChannel realtime(robot_ip, realtime_port);
     if (!realtime.Connect()) {
-        std::cerr << "5900 connection failed: "
+        std::cerr << "5900 \ 5901 connection failed: "
             << realtime.LastError() << std::endl;
-        send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);  // 第 4 位为 debug，超时用默认值
+        send_rpcsy<RespDemo>(rpc_client, stop_cmds);
         return 2;
     }
-    send_rpcAsy(rpc_client, joganyjfast_cmd, 0);
-
-    delay_ms(5000); // 等待 5 秒，确保机器人进入快速运动模式
     // ==================================================================
-    //  示例 3：5900 端口下发关节目标
+    //  示例 3：5900 \ 5901端口下发关节目标
     //  FastJointTargetParam 为 5 组臂 × 10 关节的绝对关节位置（单位 rad），
     //  每次 send_realtime_joint_target 发送一帧，发送周期由调用方控制；
     //  本示例以 1ms 周期持续发送 2000 帧。
@@ -88,29 +91,22 @@ int main() {
 
     constexpr int send_count = 2000;        // 发送总帧数
     constexpr int send_interval_ms = 1;     // 发送周期（ms）
-    int sent_count = 0;
     auto result = cpp_rpc::RealtimeSendResult::Ok;
 
     for (int i = 0; i < send_count; ++i) {
-        target.count++;  // count = 当前 JogAnyJFast 运行次数,JogAnyJFast 运行次数：每运行一次+1
-
+		target.count = jog_cmd_count;//count参数：每发送一次JogAnyJFast命令，count值加1。
         result = send_realtime_joint_target(realtime, target);
         if (result != cpp_rpc::RealtimeSendResult::Ok) {
-            std::cerr << "5900 send failed at frame " << i << ": "
+            std::cerr << "5900/5901 send failed at frame " << i << ": "
                 << realtime.LastError() << std::endl;
             break;
         }
-        ++sent_count;
         delay_ms(send_interval_ms);
     }
-    std::cout << "5900 sent " << sent_count << "/" << send_count
-        << " frames." << std::endl;
-
     realtime.Close();
 
     // ---- 停止运动（5868）--------------------------------------------
-
-    send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0, true);  // 第 4 位为 debug，超时用默认值
+    send_rpcsy<RespDemo>(rpc_client, stop_cmds, 0);
     std::cout << "Motion stopped." << std::endl;
 
     return result == cpp_rpc::RealtimeSendResult::Ok ? 0 : 3;

@@ -329,7 +329,7 @@ namespace cpp_rpc
     class CPPClient;
 
     /**
-     * @description: 5900 实时关节目标发送通道。
+     * @description: 实时关节目标发送通道，默认端口为 5900。
      * 每次 Send() 只发送一帧，调用方负责控制发送周期。
      * 单帧未在发送超时内完整写入时连接会关闭，调用方需要重新 Connect()。
      */

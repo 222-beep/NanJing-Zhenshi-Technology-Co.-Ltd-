@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-10-31
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- c24c61b update README.md
+- b8043ee SDK中添加了JogAnyJFast进入快速运动模式的使用示例（C++/Python）
+- 72a0a12 更新 C++ 和 Python RPC 文件
+- 791ac17 更新 C++ 和 Python RPC 文件
+- e86e719 [CI] 同步 get_status_C 和 get_status_py 到 Topic_SDK
+- 9aa468c [CI] 同步 get_status_C 到 Topic_SDK/topic_c++
+- d10fd7c 删除 Jenkinsfile
+- bae373e 彻底修复 SIGPIPE: 移除 pipefail 和 find|head
+- bdc70e0 添加 topic 流水线 Jenkinsfile
+- f0f009e 添加 topic 流水线 Jenkinsfile
+
 ## 2026-10-17
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -218,6 +233,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

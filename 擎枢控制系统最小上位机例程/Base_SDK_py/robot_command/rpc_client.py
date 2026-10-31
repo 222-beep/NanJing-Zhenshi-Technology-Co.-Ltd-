@@ -213,14 +213,14 @@ class RpcClient:
 
 
 # ======================================================================
-#  5900实时关节目标通道
+#  实时关节目标通道（默认端口5900）
 # ======================================================================
 
 class RealtimeRpcClient:
     """
-    5900实时关节目标发送封装。
+    实时关节目标发送封装，默认连接5900端口，也可在构造时指定其他端口。
 
-    该端口不接受普通字符串指令，只接受固定的5×10浮点关节目标数组。
+    该通道不接受普通字符串指令，只接受固定的5×10浮点关节目标数组。
     每次send()只发送一帧，发送周期由调用方控制。使用前需通过5868普通
     RPC启动JogAnyJFast并设置--index=0。目标需要持续刷新，停止发送后不应
     认为机械臂会继续运动到目标位置。
@@ -236,7 +236,7 @@ class RealtimeRpcClient:
                  send_timeout_ms: int = 100):
         if not hasattr(rpc, "RealtimeChannel"):
             raise RuntimeError(
-                "The loaded rpc extension does not support the 5900 realtime "
+                "The loaded rpc extension does not support the realtime "
                 "channel; rebuild rpc.so/rpc.pyd from the updated pybind project"
             )
         self._channel = rpc.RealtimeChannel(
