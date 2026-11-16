@@ -12,3 +12,4 @@ CMakeCache.txt
 Thumbs.db
 .DS_Store
 desktop.ini
+.vscode/
