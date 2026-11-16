@@ -62,14 +62,14 @@ def main():
     #  示例 1：通用同步 RPC
     #  经 5868 执行初始化
     # ==================================================================
-    send_rpcsy(client, init_cmds)
+    send_rpcsy(client, init_cmds, 0)
     # ==================================================================
     #  示例 2：通用异步 RPC（不等返回）
     #  经 5868 异步进入快速运动模式
     # ==================================================================
-    send_rpc_async(client, joganyjfast_cmd)
+    send_rpc_async(client, joganyjfast_cmd, 0)
 
-    # ---- 连接 5900 \5901实时通道（关节目标帧通道）------------------------
+    # ---- 连接 5900 \ 5901实时通道（关节目标帧通道）------------------------
     realtime = RealtimeRpcClient(ROBOT_IP, realtime_port)
     if not realtime.connect():
         print(f"5900 connection failed: {realtime.error_info()}")

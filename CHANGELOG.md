@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-11-16
+
+### 同步 Gitee 更新（指令手册&SDK）
+
+- 6715535 Merge branch 'master' of https://gitee.com/zhenshi-controller-api-data/hello_-demo_-example
+- 3cfeb44 删除旧文件
+- 2900e9e  SDK中添加了JogAnyJFast进入快速运动模式的使用示例（C++/Python）
+- 140c3f7 add new 指令手册.md
+- 17fc3d4 Merge branch 'master' of https://gitee.com/zhenshi-controller-api-data/hello_-demo_-example
+- 742a505 更新文档指令手册
+- 3b3ed44 更新 C++ 和 Python RPC 文件
+
 ## 2026-10-31
 
 ### 同步 Gitee 更新（指令手册&SDK）
@@ -233,6 +245,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

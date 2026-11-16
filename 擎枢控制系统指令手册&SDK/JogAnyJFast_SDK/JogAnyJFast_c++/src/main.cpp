@@ -34,7 +34,7 @@ int main() {
 //              --joint_acc   关节加速度（rad/s²）
 //              --joint_dec   关节减速度（rad/s²）
 //              --last_count  末尾保持周期数
-//              --index       0:127.0.0.1的5900端口发送的指令，1：192.168.11.11的5901端口发送的指令
+//              --index       0:127.0.0.1的5900端口发送的指令，1:192.168.11.11的5901端口发送的指令
             "{JogAnyJFast --joint_vel={1.0} --joint_acc={1.0} --joint_dec={1.0} --last_count=5000 --index=0}"
     };
 
