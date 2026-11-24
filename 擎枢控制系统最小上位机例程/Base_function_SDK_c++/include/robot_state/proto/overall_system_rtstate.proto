@@ -1,0 +1,104 @@
+// 协议
+syntax = "proto3";
+
+// 包名
+package overall_system_rtstate;
+
+// 定义通用的消息头
+message Header {
+    int64 timestamp = 1;      // 系统时间戳
+    int64 frame_id = 2;       // 帧id
+}
+
+// ft sensor
+message Ftvalue {
+	double fx=1;
+	double fy=2;
+	double fz=3;
+	double mx=4;
+	double my=5;
+	double mz=6;
+}
+
+// 控制器信息
+message Controller {
+  string controller_name = 1; 
+  double control_cycle = 2;     	  // 控制周期
+  int64 global_count = 3;           // count数
+  string master_info = 4;           // 主站监测信息 
+  bool is_link_up = 5;
+  repeated Ftvalue ftvalues = 6;        // 末端六维力传感器数值
+}
+
+// 关节信息
+message Joint {
+  string joint_type = 1;    	//  关节类型
+  double position = 2;	    	//  角度,rad
+  double torque = 3;	      	//  电流力矩,Nm
+  bool is_enabled = 4;	    	//  是否使能
+  int32 mode = 5;           	//  伺服工作模式
+  int32 error_code = 6;	    	//  伺服错误码
+  int32 digit_output = 7;   	//  数字IO输出
+  int32 digit_input = 8;    	//  数字IO输入
+  double sensor_torque = 9;	   	//  关节传感器力矩,Nm
+  double velocity = 10;
+  double target_position = 11;	//  目标角度,rad
+}
+
+// tool
+message Tool {
+	string tool_name = 1; 
+	repeated double data= 2; 
+}
+
+// wobj
+message Wobj {
+	string wobj_name = 1; 
+	repeated double data= 2; 
+}
+
+// load
+message Load {
+	string load_name = 1; 
+	repeated double data= 2; 
+}
+
+// point
+message Point {
+	string point_name = 1; 
+	Tool tool= 2; 
+	Wobj wobj=3;
+	repeated double robottarget=4;
+	repeated double jointtarget=5;
+}
+
+
+
+// 机器人模型信息
+message Model {
+	string model_name = 1;          // 模型名称
+	string model_type = 2;          // 模型类型
+	repeated Joint joint = 3;       // 机器人关节伺服信息
+	Point current_point=4;          // 当前点信息
+	int32 error_code = 5;           // 系统错误码
+	string error_msg = 6;          	// 系统错误信息
+	int32 model_state = 7;		    // 系统状态：start/stop/pause
+	double model_time_rate = 8;    	// 系统时间比例
+	string current_func_name = 9;  	// 系统当前指令
+	string current_func_info = 10;  // 系统当前指令提示信息
+	int32 func_count = 11;         	// count数
+	string info_msg = 12;          	// 系统提示信息
+	repeated double ee_pe321=13;    // pe321表示的末端位姿
+}
+
+// 统一系统状态消息
+message SystemRtState{
+
+  Header head = 1;                  // 消息头
+	
+  bool system_running_state = 2;	// 系统状态：
+
+  repeated Model model = 3;   		// 模型信息
+  Controller controller = 4;   		// 控制器信息 (EhterCAT, CANOPEN, ETHERNET, MODBUS, 其他私有协议)
+  string system_info = 5;			// 控制系统开启停止等信息
+}
