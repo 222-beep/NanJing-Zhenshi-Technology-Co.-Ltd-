@@ -5,6 +5,7 @@
 
 #include "command.hpp"
 #include "system_state_reader.hpp"
+#include "ethercat_read_pdo.hpp"
 
 #include <chrono>
 #include <exception>

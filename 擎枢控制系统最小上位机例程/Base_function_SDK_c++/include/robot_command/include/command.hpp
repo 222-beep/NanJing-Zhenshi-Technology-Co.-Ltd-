@@ -7,9 +7,10 @@
 #include <mutex>
 #include <memory>
 #include <unordered_map>
+#include <future>
 #include "cpp_rpc.hpp"
 #include "arm_params.hpp"
-#include "rpc_client.h"  
+#include "message/rpc_client.h"
 
 // ====================== 命令参数结构体 ======================
 /**
@@ -43,6 +44,19 @@ struct CommandParams {
     int moving_type = 0;              // 笛卡尔运动方式 0~5（0~2 平动，3~5 旋转）
     int coordinate = 0;               // 参考坐标系：0-世界坐标系，1-工具坐标系
     int open_tg = 0;                  // DragFtInCartesian 使用：0 直接力控拖拽，1 配合 MoveBlend
+};
+
+/**
+ * @brief 电流环拖动参数，默认值与 DragInCST_SDK 示例 main 对齐
+ */
+struct DragInCSTParams {
+    std::vector<int> cbfSwitch = { 0 };          // 电流环反馈开关
+    double cutoff_freq = 20.0;                   // 截止频率
+    std::vector<double> gravity_cof = { 1.0 };   // 重力补偿系数
+    int ping_pong = 100;                         // 乒乓周期
+    double ping_pong_amp = 0.5;                  // 乒乓幅值
+    std::vector<double> vel_limit = { 0.1 };     // 速度限制
+    std::vector<double> zero_check = { 0.0001 }; // 零速检查阈值
 };
 
 /**
@@ -128,10 +142,47 @@ public:
     bool Start();
 
     /**
+     * @brief 将被暂停或停止的运动重新启动
+     * @param last_count 指令存在时间（毫秒）；<=0 时发送不带参数的 {Start}
+     * @return true-发送成功，false-发送失败
+     */
+    bool Start(int last_count);
+
+    /**
+     * @brief 在独立线程中发送 Start，不阻塞调用线程
+     * @param last_count 指令存在时间（毫秒）；<=0 时发送不带参数的 {Start}
+     * @param timeout_ms RPC 超时时间（毫秒）
+     * @return future<bool>，true 表示指令已提交发送；需保持 Command 对象存活
+     */
+    std::future<bool> StartInThread(int last_count = 0, int timeout_ms = 10000);
+
+    /**
      * @brief 停止运动，并跳出该指令。后续缓冲指令均不执行
      * @return true-发送成功，false-发送失败
      */
     bool Stop();
+
+    /**
+     * @brief 停止运动，并跳出该指令。后续缓冲指令均不执行
+     * @param last_count 指令存在时间（毫秒）；<=0 时发送不带参数的 {Stop}
+     * @return true-发送成功，false-发送失败
+     */
+    bool Stop(int last_count);
+
+    /**
+     * @brief 在独立线程中发送 Stop，不阻塞调用线程
+     * @param last_count 指令存在时间（毫秒）；<=0 时发送不带参数的 {Stop}
+     * @param timeout_ms RPC 超时时间（毫秒）
+     * @return future<bool>，true 表示指令已提交发送；需保持 Command 对象存活
+     */
+    std::future<bool> StopInThread(int last_count = 0, int timeout_ms = 10000);
+
+    /**
+     * @brief 等待指定控制周期数，常用于 Stop 后等待停止生效
+     * @param count 等待周期数
+     * @return true-发送成功，false-发送失败
+     */
+    bool Sleep(int count);
 
     /**
      * @brief 获取默认的速度前馈系数（vf）和阻尼系数（cf）
@@ -147,15 +198,19 @@ public:
 
     /**
      * @brief 转换为转矩模式（CST）
+     * @param all 是否切换全部轴，默认 true，与 DragInCST_SDK 示例对齐
+     * @param max_torque 最大力矩限制，默认 1000
      * @return true-发送成功，false-发送失败
      */
-    bool SwitchToCST();
+    bool SwitchToCST(bool all = true, int max_torque = 1000);
 
     /**
      * @brief 转换为位置模式（CSP）
+     * @param all 是否切换全部轴，默认 true，与 DragInCST_SDK 示例对齐
+     * @param max_torque 最大力矩限制，默认 1000
      * @return true-发送成功，false-发送失败
      */
-    bool SwitchToCSP();
+    bool SwitchToCSP(bool all = true, int max_torque = 1000);
 
     /**
      * @brief 力传感器复位/清零（仅实机有效，仿真无效）
@@ -314,23 +369,22 @@ public:
         const std::vector<int>& force_target, int open_tg = 0, int wait_time = 0);
 
     /**
-     * @brief 电流环拖动（直接调用 SetDragInCSTOn/Off 替代）
-     * @param cf_coef 阻尼系数，范围 0~1
-     * @param vf_coef 速度前馈系数，范围 0~1
+     * @brief 电流环拖动，参数与 DragInCST_SDK 示例 main 对齐
+     * @param params 拖动参数，默认使用示例中的 cbfSwitch/cutoff_freq/gravity_cof 等配置
      * @return true-发送成功，false-发送失败
      */
-    bool DragInCST(const std::vector<double>& cf_coef, const std::vector<double>& vf_coef, int wait_time);
+    bool DragInCST(const DragInCSTParams& params = {});
 
     /**
-     * @brief 打开电流环拖动（异步，需用 Stop 或 SetDragInCSTOff 终止）
-     * @param cf_coef 阻尼系数，范围 0~1
-     * @param vf_coef 速度前馈系数，范围 0~1
+     * @brief 打开电流环拖动：GetDefaultVfCf → DeleteMotionRecord → SwitchToCST → DragInCST
+     * @param params 拖动参数，默认使用 DragInCST_SDK 示例配置
      * @return true-发送成功，false-发送失败
      */
-    bool SetDragInCSTOn(const std::vector<double>& cf_coef, const std::vector<double>& vf_coef, int wait_time);
+    bool SetDragInCSTOn(const DragInCSTParams& params = {});
 
     /**
-     * @brief 关闭电流环拖动并恢复位置模式
+     * @brief 关闭电流环拖动并恢复位置模式：
+     *        Stop → Sleep → SwitchToCSP → Recover → Start
      * @return true-发送成功，false-发送失败
      */
     bool SetDragInCSTOff();

@@ -9,61 +9,145 @@ set(CMAKE_CONFIGURATION_TYPES Release)
 add_definitions(-DCODEIT_1_3_0)
 add_definitions(-DCPP_RPC_LIB)
 
-option(BASE_FUNCTION_SDK_ENABLE_PROTOC "Generate topic proto sources" ON)
+option(SMAL_SYS_ENABLE_PROTOC "Generate topic proto sources" ON)
 
-set(APP_TARGET Base_function_SDK_cxx)
 set(PROTO_DIR "${CMAKE_SOURCE_DIR}/include/robot_state/proto")
 set(GENERATED_PROTO_DIR "${CMAKE_BINARY_DIR}/generated_proto")
+set(BUNDLED_GENERATED_PROTO_DIR "${CMAKE_SOURCE_DIR}/include/robot_state/proto_generated")
 set(GENERATED_SRCS)
+file(GLOB BUNDLED_GENERATED_SRCS "${BUNDLED_GENERATED_PROTO_DIR}/*.pb.cc")
 
-if(BASE_FUNCTION_SDK_ENABLE_PROTOC)
+if(NOT BUNDLED_GENERATED_SRCS)
+    message(FATAL_ERROR "Bundled generated protobuf sources not found: ${BUNDLED_GENERATED_PROTO_DIR}")
+endif()
+
+if(SMAL_SYS_ENABLE_PROTOC)
     if(WIN32)
         set(PROTOC_EXECUTABLE "${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release/protoc.exe")
+        if(NOT EXISTS "${PROTOC_EXECUTABLE}")
+            unset(PROTOC_EXECUTABLE)
+        endif()
     else()
         find_program(PROTOC_EXECUTABLE protoc)
     endif()
 
     if(NOT PROTOC_EXECUTABLE)
-        message(FATAL_ERROR "protoc not found")
+        message(WARNING "protoc not found; using bundled generated protobuf sources")
+        set(GENERATED_SRCS ${BUNDLED_GENERATED_SRCS})
+    else()
+        file(MAKE_DIRECTORY "${GENERATED_PROTO_DIR}")
+        file(GLOB PROTO_FILES "${PROTO_DIR}/*.proto")
+        if(WIN32)
+            # Stage protoc and its private DLLs in the output directory so its
+            # command line contains no drive letter or non-ASCII source path.
+            set(STAGED_PROTOC "${GENERATED_PROTO_DIR}/protoc.exe")
+            set(STAGED_LIBPROTOC
+                "${GENERATED_PROTO_DIR}/libprotoc.dll")
+            set(STAGED_LIBPROTOBUF
+                "${GENERATED_PROTO_DIR}/libprotobuf.dll")
+            add_custom_command(
+                OUTPUT
+                    "${STAGED_PROTOC}"
+                    "${STAGED_LIBPROTOC}"
+                    "${STAGED_LIBPROTOBUF}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${PROTOC_EXECUTABLE}" "${STAGED_PROTOC}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release/libprotoc.dll"
+                    "${STAGED_LIBPROTOC}"
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release/libprotobuf.dll"
+                    "${STAGED_LIBPROTOBUF}"
+                DEPENDS
+                    "${PROTOC_EXECUTABLE}"
+                    "${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release/libprotoc.dll"
+                    "${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release/libprotobuf.dll"
+                VERBATIM
+            )
+        else()
+            file(RELATIVE_PATH PROTOC_RELATIVE_PATH
+                 "${PROTO_DIR}" "${PROTOC_EXECUTABLE}")
+            file(RELATIVE_PATH GENERATED_PROTO_RELATIVE_PATH
+                 "${PROTO_DIR}" "${GENERATED_PROTO_DIR}")
+        endif()
+
+        foreach(PROTO_FILE ${PROTO_FILES})
+            get_filename_component(PROTO_NAME "${PROTO_FILE}" NAME_WE)
+            set(GEN_SRC "${GENERATED_PROTO_DIR}/${PROTO_NAME}.pb.cc")
+            set(GEN_HDR "${GENERATED_PROTO_DIR}/${PROTO_NAME}.pb.h")
+
+            if(WIN32)
+                set(STAGED_PROTO
+                    "${GENERATED_PROTO_DIR}/${PROTO_NAME}.proto")
+                add_custom_command(
+                    OUTPUT "${GEN_SRC}" "${GEN_HDR}"
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${PROTO_FILE}" "${STAGED_PROTO}"
+                    COMMAND protoc.exe
+                        --proto_path=.
+                        --cpp_out=.
+                        "${PROTO_NAME}.proto"
+                    DEPENDS "${PROTO_FILE}" "${STAGED_PROTOC}"
+                    WORKING_DIRECTORY "${GENERATED_PROTO_DIR}"
+                    BYPRODUCTS "${STAGED_PROTO}"
+                    COMMENT "Running protoc on ${PROTO_NAME}.proto"
+                    VERBATIM
+                )
+            else()
+                add_custom_command(
+                    OUTPUT "${GEN_SRC}" "${GEN_HDR}"
+                    COMMAND "${PROTOC_RELATIVE_PATH}"
+                        --proto_path=.
+                        --cpp_out="${GENERATED_PROTO_RELATIVE_PATH}"
+                        "${PROTO_NAME}.proto"
+                    DEPENDS "${PROTO_FILE}"
+                    WORKING_DIRECTORY "${PROTO_DIR}"
+                    COMMENT "Running protoc on ${PROTO_NAME}.proto"
+                    VERBATIM
+                )
+            endif()
+            list(APPEND GENERATED_SRCS "${GEN_SRC}")
+        endforeach()
     endif()
-
-    file(MAKE_DIRECTORY "${GENERATED_PROTO_DIR}")
-    file(GLOB PROTO_FILES "${PROTO_DIR}/*.proto")
-    foreach(PROTO_FILE ${PROTO_FILES})
-        get_filename_component(PROTO_NAME "${PROTO_FILE}" NAME_WE)
-        set(GEN_SRC "${GENERATED_PROTO_DIR}/${PROTO_NAME}.pb.cc")
-        set(GEN_HDR "${GENERATED_PROTO_DIR}/${PROTO_NAME}.pb.h")
-
-        add_custom_command(
-            OUTPUT "${GEN_SRC}" "${GEN_HDR}"
-            COMMAND "${PROTOC_EXECUTABLE}"
-                --proto_path="${PROTO_DIR}"
-                --cpp_out="${GENERATED_PROTO_DIR}"
-                "${PROTO_FILE}"
-            DEPENDS "${PROTO_FILE}"
-            COMMENT "Running protoc on ${PROTO_NAME}.proto"
-        )
-        list(APPEND GENERATED_SRCS "${GEN_SRC}")
-    endforeach()
+else()
+    set(GENERATED_SRCS ${BUNDLED_GENERATED_SRCS})
 endif()
 
 if(UNIX)
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "arm|aarch64")
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" SMAL_SYS_PROCESSOR)
+    if(SMAL_SYS_PROCESSOR MATCHES "^(aarch64|arm64)$")
         set(LIB_ARCH_DIR "arm")
-    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64|i386|i686")
+    elseif(SMAL_SYS_PROCESSOR MATCHES "^(x86_64|amd64)$")
         set(LIB_ARCH_DIR "x86")
     else()
-        message(WARNING "Unknown architecture: ${CMAKE_SYSTEM_PROCESSOR}, using x86")
-        set(LIB_ARCH_DIR "x86")
+        message(FATAL_ERROR
+            "Unsupported Linux architecture: ${CMAKE_SYSTEM_PROCESSOR}. "
+            "Bundled libraries support x86_64 and ARM64 (aarch64) only.")
     endif()
 
-    set(UBUNTU_VERSION "20.04" CACHE STRING "Ubuntu version (20.04 or 22.04)")
-    link_directories("${CMAKE_SOURCE_DIR}/include/robot_command/lib/linux/${LIB_ARCH_DIR}/Release")
-    link_directories("${CMAKE_SOURCE_DIR}/include/robot_state/lib/linux/${LIB_ARCH_DIR}/${UBUNTU_VERSION}/Release")
+    set(RPC_LIB_DIR
+        "${CMAKE_SOURCE_DIR}/include/robot_command/lib/linux/${LIB_ARCH_DIR}")
+    if(NOT EXISTS "${RPC_LIB_DIR}/libcpp_rpc.so")
+        message(FATAL_ERROR
+            "Bundled RPC library not found: ${RPC_LIB_DIR}/libcpp_rpc.so")
+    endif()
+
+    set(TOPIC_LIB_DIR
+        "${CMAKE_SOURCE_DIR}/include/robot_state/lib/linux/${LIB_ARCH_DIR}")
+    if(NOT EXISTS "${TOPIC_LIB_DIR}/libmessage.so")
+        message(FATAL_ERROR
+            "Bundled Topic library not found: ${TOPIC_LIB_DIR}/libmessage.so. "
+            "Check the robot_state library package and Ubuntu version.")
+    endif()
+
+    message(STATUS "Using Linux RPC library: ${RPC_LIB_DIR}")
+    message(STATUS "Using Linux Topic library: ${TOPIC_LIB_DIR}")
 elseif(WIN32)
     link_directories("${CMAKE_SOURCE_DIR}/include/robot_command/lib/win/Release")
     link_directories("${CMAKE_SOURCE_DIR}/include/robot_state/lib/win/Release")
 endif()
+
+set(APP_TARGET Base_function_SDK_cxx)
 
 add_executable(${APP_TARGET}
     src/main.cpp
@@ -78,12 +162,14 @@ set_target_properties(${APP_TARGET} PROPERTIES
 )
 
 target_include_directories(${APP_TARGET} PRIVATE
+    "${CMAKE_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/include/robot_command/include"
     "${CMAKE_SOURCE_DIR}/include/robot_command/include/message"
     "${CMAKE_SOURCE_DIR}/include/robot_command/include/util/reflection"
     "${CMAKE_SOURCE_DIR}/include/robot_state/include"
     "${CMAKE_SOURCE_DIR}/include/robot_state/message_struct"
     "${GENERATED_PROTO_DIR}"
+    "${BUNDLED_GENERATED_PROTO_DIR}"
 )
 
 if(MSVC)
@@ -124,10 +210,33 @@ if(WIN32)
     )
 elseif(UNIX)
     target_link_libraries(${APP_TARGET} PRIVATE
-        libcpp_rpc.so
-        libprotobuf.so
-        libzmq.so
-        libmessage.so
+        "${RPC_LIB_DIR}/libcpp_rpc.so"
+        "${TOPIC_LIB_DIR}/libprotobuf.so"
+        "${TOPIC_LIB_DIR}/libzmq.so"
+        "${TOPIC_LIB_DIR}/libmessage.so"
         pthread
+    )
+
+    set(LINUX_RUNTIME_LIBS
+        "${RPC_LIB_DIR}/libcpp_rpc.so"
+        "${TOPIC_LIB_DIR}/libprotobuf.so"
+        "${TOPIC_LIB_DIR}/libprotobuf.so.32"
+        "${TOPIC_LIB_DIR}/libzmq.so"
+        "${TOPIC_LIB_DIR}/libzmq.so.5"
+        "${TOPIC_LIB_DIR}/libmessage.so"
+    )
+    foreach(LINUX_RUNTIME_LIB ${LINUX_RUNTIME_LIBS})
+        add_custom_command(TARGET ${APP_TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${LINUX_RUNTIME_LIB}"
+                "$<TARGET_FILE_DIR:${APP_TARGET}>"
+        )
+    endforeach()
+
+    # The executable and all bundled shared libraries are placed side by side.
+    # Use a relative RPATH so the build output remains relocatable after copying.
+    set_target_properties(${APP_TARGET} PROPERTIES
+        BUILD_WITH_INSTALL_RPATH TRUE
+        INSTALL_RPATH "$ORIGIN"
     )
 endif()

@@ -1,5 +1,5 @@
 #include "multi_arm_command.hpp"
-#include "resp_dto.h"
+#include "message/resp_dto.h"
 #include <iostream>
 
 // ====================== 多臂命令实现 ======================
@@ -70,7 +70,7 @@ bool MultiArmCommand::PointChooseIDMove1Triple(const ArmPointChooseIDMove1Params
         };
 
     std::string combined = "{" + buildCmd(arm1) + "||" + buildCmd(arm2) + "||" + buildCmd(arm3) + "}";
-    auto results = send_rpcsy<PointChooseIDMoveResp>(getClient(), { combined }, 100000, 0);
+    auto results = send_rpcsy<PointChooseIDMoveResp>(getClient(), { combined }, 0, false, 100000);
     if (!results.empty() && !results[0].target_pq.empty()) {
         const auto& pq = results[0].target_pq;
         // 拷贝前7个元素到 output_pq

@@ -1,5 +1,5 @@
 #include "command.hpp"
-#include "resp_dto.h"         
+#include "message/resp_dto.h"
 #include <chrono>
 #include <thread>
 #include <iostream>
@@ -19,6 +19,14 @@ static std::string extractCommandType(const std::string& cmd_str) {
         if (end == std::string::npos) return "";
     }
     return cmd_str.substr(start, end - start);
+}
+
+// 生成带可选 --last_count 的指令，如 {Stop} 或 {Stop --last_count=10}
+static std::string makeLastCountCommand(const std::string& name, int last_count) {
+    if (last_count > 0) {
+        return "{" + name + " --last_count=" + std::to_string(last_count) + "}";
+    }
+    return "{" + name + "}";
 }
 
 // vectorToString 实现
@@ -50,8 +58,8 @@ Command::Command(const std::string& server_ip, int server_port, bool auto_connec
         {"Stop", "{Stop}"},
         {"GetDefaultVfCf", "{GetDefaultVfCf}"},
         {"DeleteMotionRecord", "{DeleteMotionRecord}"},
-        {"SwitchToCST", "{SwitchToCST}"},
-        {"SwitchToCSP", "{SwitchToCSP}"},
+        {"SwitchToCST", "{SwitchToCST --all --max_torque=1000}"},
+        {"SwitchToCSP", "{SwitchToCSP --all --max_torque=1000}"},
         {"ResetFtSensor", "{ResetFtSensor}"},
         {"DeleteVar", "{DeleteVar --name={target_name}}"},
         {"SetTool", "{SetTool --tool_var={target_name}}"},
@@ -64,7 +72,6 @@ Command::Command(const std::string& server_ip, int server_port, bool auto_connec
         {"SpeedL", "{SpeedL --vel={{{vel}}} --acc={{{acc}}} --jerk={{{jerk}}} --last_count={last_count} --coordinate={coordinate}}"},
         {"MoveThreeFingersEcatCTEK", "{MoveThreeFingersEcatCTEK --distance={{{distance}}} --interval={last_count}}"},
         {"DragFtInCartesian", "{DragFtInCartesian --force_target={{{force_target}}} --force_direction={{{force_direction}}} --open_tg={open_tg}}"},
-        {"DragInCST", "{DragInCST --cf_coef={{{cf_coef}}} --vf_coef={{{vf_coef}}} --vel_limit={0.3,0.3,0.3,0.3,0.3,0.3,0.3} --ping_pong_amp=0 --zero_check=0.004}"},
         {"SetUsingSP", "{SetUsingSP --state={var_type}}"},
         {"SetCollisionDetection", "{SetCollisionDetection --state={var_type}}"},
     };
@@ -299,7 +306,7 @@ bool Command::sendSync(const std::vector<std::string>& cmds, int timeout_ms)
             }
             else {
                 std::cerr << "RPC call failed with code " << result.first << std::endl;
-                if (result.first == -1 || result.first == -2) {
+                if (result.first == cpp_rpc::RPC_DISCONNECTED_CODE || !client_->IsConnected()) {
                     connected_.store(false);
                 }
                 return false;
@@ -328,9 +335,11 @@ bool Command::sendAsync(const std::vector<std::string>& cmds, int timeout_ms, in
     for (const auto& cmd : cmds) {
         try {
             core::Msg msg(cmd);
+            msg.setMsgID(10001);
+            msg.setMsgSeqID(requestIDGenerator.next());
             std::cout << "***Sending async command: " << cmd << std::endl;
 
-            client_->CallAsync<RespDemo>(msg, timeout_ms,
+            const bool sent = client_->CallAsync<RespDemo>(msg, timeout_ms,
                 [cmd](int ret, std::vector<RespDemo> res) {
                     if (ret < 0) {
                         std::cerr << "Async command failed with code " << ret << ": " << cmd << std::endl;
@@ -344,11 +353,13 @@ bool Command::sendAsync(const std::vector<std::string>& cmds, int timeout_ms, in
                     }
                     std::cout << "************************************" << std::endl;
                 });
-            core::Msg sync_msg(cmd);
-            sync_msg.setMsgID(10001);
-            sync_msg.setMsgSeqID(requestIDGenerator.next());
-            
-            // ===== 修改点 2：Sleep(wait_time) 替换为跨平台 delay_ms =====
+            if (!sent) {
+                std::cerr << "Failed to send async command: " << cmd << std::endl;
+                all_sent = false;
+                continue;
+            }
+
+            // 等待下一条异步指令，避免连续发送时相互覆盖。
             delay_ms(wait_time);
         }
         catch (const std::exception& e) {
@@ -368,7 +379,7 @@ bool Command::sendCommand(const CommandParams& params, int timeout_ms, int wait_
     }
 
     std::string cmd_type = extractCommandType(cmd_str);
-    if (cmd_type == "DragInCST" || cmd_type == "DragFtInCartesian" || cmd_type == "SpeedL" || cmd_type == "JogAnyJ3") {
+    if (cmd_type == "DragFtInCartesian" || cmd_type == "SpeedL" || cmd_type == "JogAnyJ3") {
         return sendAsync({ cmd_str }, timeout_ms, wait_time);
     }
     else {
@@ -412,18 +423,54 @@ bool Command::Recover()
 
 bool Command::Start()
 {
+    return Start(0);
+}
+
+bool Command::Start(int last_count)
+{
     std::cout << "====== Sending Start command ======" << std::endl;
-    CommandParams params;
-    params.command_type = "Start";
-    return sendCommand(params, 5000);
+    return sendSync({ makeLastCountCommand("Start", last_count) }, 5000);
+}
+
+std::future<bool> Command::StartInThread(int last_count, int timeout_ms)
+{
+    std::lock_guard<std::mutex> lock(client_mutex_);
+    if (!client_) {
+        std::cerr << "Not connected, Start not sent." << std::endl;
+        std::promise<bool> promise;
+        promise.set_value(false);
+        return promise.get_future();
+    }
+    return send_rpc_thread(*client_, makeLastCountCommand("Start", last_count), false, timeout_ms);
 }
 
 bool Command::Stop()
 {
+    return Stop(0);
+}
+
+bool Command::Stop(int last_count)
+{
     std::cout << "====== Sending Stop command ======" << std::endl;
-    CommandParams params;
-    params.command_type = "Stop";
-    return sendCommand(params, 5000);
+    return sendSync({ makeLastCountCommand("Stop", last_count) }, 5000);
+}
+
+std::future<bool> Command::StopInThread(int last_count, int timeout_ms)
+{
+    std::lock_guard<std::mutex> lock(client_mutex_);
+    if (!client_) {
+        std::cerr << "Not connected, Stop not sent." << std::endl;
+        std::promise<bool> promise;
+        promise.set_value(false);
+        return promise.get_future();
+    }
+    return send_rpc_thread(*client_, makeLastCountCommand("Stop", last_count), false, timeout_ms);
+}
+
+bool Command::Sleep(int count)
+{
+    std::cout << "====== Sending Sleep command ======" << std::endl;
+    return sendSync({ "{Sleep --count=" + std::to_string(count) + "}" }, 5000);
 }
 
 bool Command::GetDefaultVfCf()
@@ -442,20 +489,22 @@ bool Command::DeleteMotionRecord()
     return sendCommand(params, 5000);
 }
 
-bool Command::SwitchToCST()
+bool Command::SwitchToCST(bool all, int max_torque)
 {
     std::cout << "====== Sending SwitchToCST command ======" << std::endl;
-    CommandParams params;
-    params.command_type = "SwitchToCST";
-    return sendCommand(params, 5000);
+    std::string cmd = "{SwitchToCST";
+    if (all) cmd += " --all";
+    cmd += " --max_torque=" + std::to_string(max_torque) + "}";
+    return sendSync({ cmd }, 5000);
 }
 
-bool Command::SwitchToCSP()
+bool Command::SwitchToCSP(bool all, int max_torque)
 {
     std::cout << "====== Sending SwitchToCSP command ======" << std::endl;
-    CommandParams params;
-    params.command_type = "SwitchToCSP";
-    return sendCommand(params, 5000);
+    std::string cmd = "{SwitchToCSP";
+    if (all) cmd += " --all";
+    cmd += " --max_torque=" + std::to_string(max_torque) + "}";
+    return sendSync({ cmd }, 5000);
 }
 
 bool Command::ResetFtSensor()
@@ -648,17 +697,22 @@ bool Command::DragFtInCartesian(const std::vector<int>& force_direction,
     return sendCommand(params, 86400000, wait_time);
 }
 
-bool Command::DragInCST(const std::vector<double>& cf_coef, const std::vector<double>& vf_coef, int wait_time)
+bool Command::DragInCST(const DragInCSTParams& params)
 {
     std::cout << "====== Sending DragInCST command ======" << std::endl;
-    CommandParams params;
-    params.command_type = "DragInCST";
-    params.cf_coef = cf_coef;
-    params.vf_coef = vf_coef;
-    return sendCommand(params, 86400000, wait_time);
+    std::ostringstream oss;
+    oss << "{DragInCST --cbfSwitch={" << vectorToString(params.cbfSwitch)
+        << "} --cutoff_freq=" << params.cutoff_freq
+        << " --gravity_cof={" << vectorToString(params.gravity_cof)
+        << "} --ping_pong=" << params.ping_pong
+        << " --ping_pong_amp=" << params.ping_pong_amp
+        << " --vel_limit={" << vectorToString(params.vel_limit)
+        << "} --zero_check={" << vectorToString(params.zero_check) << "}}";
+    // DragInCST 只需同步发送一次，控制器会持续保持拖拽状态。
+    return sendSync({ oss.str() }, 10000);
 }
 
-bool Command::SetDragInCSTOn(const std::vector<double>& cf_coef, const std::vector<double>& vf_coef, int wait_time)
+bool Command::SetDragInCSTOn(const DragInCSTParams& params)
 {
     std::cout << "====== Sending SetDragInCSTOn command ======" << std::endl;
     if (!GetDefaultVfCf()) {
@@ -673,7 +727,7 @@ bool Command::SetDragInCSTOn(const std::vector<double>& cf_coef, const std::vect
         std::cerr << "SwitchToCST failed, sequence aborted" << std::endl;
         return false;
     }
-    if (!DragInCST(cf_coef, vf_coef, wait_time)) {
+    if (!DragInCST(params)) {
         std::cerr << "DragInCST failed, sequence aborted" << std::endl;
         return false;
     }
@@ -684,8 +738,12 @@ bool Command::SetDragInCSTOn(const std::vector<double>& cf_coef, const std::vect
 bool Command::SetDragInCSTOff()
 {
     std::cout << "====== Sending SetDragInCSTOff command ======" << std::endl;
-    if (!Stop()) {
+    if (!Stop(10)) {
         std::cerr << "Stop failed, sequence aborted" << std::endl;
+        return false;
+    }
+    if (!Sleep(20)) {
+        std::cerr << "Sleep failed, sequence aborted" << std::endl;
         return false;
     }
     if (!SwitchToCSP()) {
@@ -696,7 +754,7 @@ bool Command::SetDragInCSTOff()
         std::cerr << "Recover failed, sequence aborted" << std::endl;
         return false;
     }
-    if (!Start()) {
+    if (!Start(50)) {
         std::cerr << "Start failed, sequence aborted" << std::endl;
         return false;
     }

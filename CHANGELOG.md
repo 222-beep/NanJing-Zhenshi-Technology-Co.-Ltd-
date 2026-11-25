@@ -4,6 +4,25 @@
 
 ---
 
+## 2026-11-25
+
+### Base_function_SDK_c++ 增加 PDO 读取、独立线程 Stop/Start 并对齐电流环拖动
+
+- 新增 `robot_state/include/ethercat_read_pdo.hpp`，内置已验证的 EthercatReadPDO 线协议结构、报文校验和 `tryGetEthercatPDOData` / `getEthercatPDOData` 读取函数，支持通过 NRT Protobuf 子系统 `data` 字段获取 PDO 值；`API.md` 补充对应用法
+- `Command` 新增 `StopInThread` / `StartInThread` 独立线程发送接口，复用 `send_rpc_thread`，不阻塞调用线程；`Stop` / `Start` 增加可选 `last_count` 参数，并新增 `Sleep` 指令
+- 电流环拖动相关指令与 `DragInCST_SDK/DragInCST_c++` 示例 main 对齐：`SwitchToCST` / `SwitchToCSP` 默认发送 `--all --max_torque=1000`；`DragInCST` 改用 `DragInCSTParams`（`cbfSwitch`、`cutoff_freq`、`gravity_cof`、`ping_pong`、`ping_pong_amp`、`vel_limit`、`zero_check`）并同步发送一次；退出序列调整为 `Stop(10) → Sleep(20) → SwitchToCSP → Recover → Start(50)`
+- 注意：`DragInCST` / `SetDragInCSTOn` 的旧 `cf_coef` / `vf_coef` 参数接口已替换为 `DragInCSTParams`
+- Windows x64 Release 默认 `protoc` 与关闭 `protoc` 两种构建均通过；未连接实机运行
+
+## 2026-11-24
+
+### 同步高层指令封装 SDK 的公共依赖
+
+- 根据 `Base_SDK_c++` 更新 `Base_function_SDK_c++` 的 `robot_command` RPC 客户端、`robot_state` Topic/Protobuf 头文件、协议、预生成 pb 文件及 Linux/Windows 平台库，保留单臂、双臂和多臂指令封装
+- Linux 平台库目录统一为 `lib/linux/{arm,x86}/`，移除旧的 `20.04`、`22.04`、`Release` 层级；CMake 增加预生成 Protobuf 兜底、随附动态库复制和相对 RPATH，并改用相对路径调用 `protoc`，避免中文项目路径导致的生成失败
+- 高层封装适配 `message/resp_dto.h` 新位置及 `send_rpcsy(interval_ms, debug, timeout_ms)` 参数顺序，并补齐异步消息 ID/序列号、发送结果检查和新版断连码处理
+- 根目录 `README.md` 将 `Base_function_SDK_c++.zip` 修正为实际的 `Base_function_SDK_c++/` 文件夹
+
 ## 2026-11-16
 
 ### 同步 Gitee 更新（指令手册&SDK）

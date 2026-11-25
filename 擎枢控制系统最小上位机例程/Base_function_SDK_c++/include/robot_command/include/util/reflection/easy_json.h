@@ -381,36 +381,32 @@ bool Unmarshal(T& obj, const string& s) {
 #define MACRO_CAT(a, b) __macro_cat__(a, b)
 #define __macro_cat__(a, b) a##b
 
-// MSVC 传统预处理器兼容：强制二次展开 __VA_ARGS__
-// 传统预处理器把 __VA_ARGS__ 当作单个 token，EXPAND 迫使它在拼接前展开
-#define EXPAND(...) __VA_ARGS__
-
 // 宏展开实现伪循环
 #define __func_1(func, member) func(member);
-#define __func_2(func, member, ...) __func_1(func, member) EXPAND(__func_1(func, __VA_ARGS__))
-#define __func_3(func, member, ...) __func_1(func, member) EXPAND(__func_2(func, __VA_ARGS__))
-#define __func_4(func, member, ...) __func_1(func, member) EXPAND(__func_3(func, __VA_ARGS__))
-#define __func_5(func, member, ...) __func_1(func, member) EXPAND(__func_4(func, __VA_ARGS__))
-#define __func_6(func, member, ...) __func_1(func, member) EXPAND(__func_5(func, __VA_ARGS__))
-#define __func_7(func, member, ...) __func_1(func, member) EXPAND(__func_6(func, __VA_ARGS__))
-#define __func_8(func, member, ...) __func_1(func, member) EXPAND(__func_7(func, __VA_ARGS__))
-#define __func_9(func, member, ...) __func_1(func, member) EXPAND(__func_8(func, __VA_ARGS__))
-#define __func_10(func, member, ...) __func_1(func, member) EXPAND(__func_9(func, __VA_ARGS__))
-#define __func_11(func, member, ...) __func_1(func, member) EXPAND(__func_10(func, __VA_ARGS__))
-#define __func_12(func, member, ...) __func_1(func, member) EXPAND(__func_11(func, __VA_ARGS__))
-#define __func_13(func, member, ...) __func_1(func, member) EXPAND(__func_12(func, __VA_ARGS__))
-#define __func_14(func, member, ...) __func_1(func, member) EXPAND(__func_13(func, __VA_ARGS__))
-#define __func_15(func, member, ...) __func_1(func, member) EXPAND(__func_14(func, __VA_ARGS__))
-#define __func_16(func, member, ...) __func_1(func, member) EXPAND(__func_15(func, __VA_ARGS__))
-#define __func_17(func, member, ...) __func_1(func, member) EXPAND(__func_16(func, __VA_ARGS__))
-#define __func_18(func, member, ...) __func_1(func, member) EXPAND(__func_17(func, __VA_ARGS__))
-#define __func_19(func, member, ...) __func_1(func, member) EXPAND(__func_18(func, __VA_ARGS__))
-#define __func_20(func, member, ...) __func_1(func, member) EXPAND(__func_19(func, __VA_ARGS__))
-#define __func_21(func, member, ...) __func_1(func, member) EXPAND(__func_20(func, __VA_ARGS__))
-#define __func_22(func, member, ...) __func_1(func, member) EXPAND(__func_21(func, __VA_ARGS__))
-#define __func_23(func, member, ...) __func_1(func, member) EXPAND(__func_22(func, __VA_ARGS__))
+#define __func_2(func, member, ...) __func_1(func, member) __func_1(func, __VA_ARGS__)
+#define __func_3(func, member, ...) __func_1(func, member) __func_2(func, __VA_ARGS__)
+#define __func_4(func, member, ...) __func_1(func, member) __func_3(func, __VA_ARGS__)
+#define __func_5(func, member, ...) __func_1(func, member) __func_4(func, __VA_ARGS__)
+#define __func_6(func, member, ...) __func_1(func, member) __func_5(func, __VA_ARGS__)
+#define __func_7(func, member, ...) __func_1(func, member) __func_6(func, __VA_ARGS__)
+#define __func_8(func, member, ...) __func_1(func, member) __func_7(func, __VA_ARGS__)
+#define __func_9(func, member, ...) __func_1(func, member) __func_8(func, __VA_ARGS__)
+#define __func_10(func, member, ...) __func_1(func, member) __func_9(func, __VA_ARGS__)
+#define __func_11(func, member, ...) __func_1(func, member) __func_10(func, __VA_ARGS__)
+#define __func_12(func, member, ...) __func_1(func, member) __func_11(func, __VA_ARGS__)
+#define __func_13(func, member, ...) __func_1(func, member) __func_12(func, __VA_ARGS__)
+#define __func_14(func, member, ...) __func_1(func, member) __func_13(func, __VA_ARGS__)
+#define __func_15(func, member, ...) __func_1(func, member) __func_14(func, __VA_ARGS__)
+#define __func_16(func, member, ...) __func_1(func, member) __func_15(func, __VA_ARGS__)
+#define __func_17(func, member, ...) __func_1(func, member) __func_16(func, __VA_ARGS__)
+#define __func_18(func, member, ...) __func_1(func, member) __func_17(func, __VA_ARGS__)
+#define __func_19(func, member, ...) __func_1(func, member) __func_18(func, __VA_ARGS__)
+#define __func_20(func, member, ...) __func_1(func, member) __func_19(func, __VA_ARGS__)
+#define __func_21(func, member, ...) __func_1(func, member) __func_20(func, __VA_ARGS__)
+#define __func_22(func, member, ...) __func_1(func, member) __func_21(func, __VA_ARGS__)
+#define __func_23(func, member, ...) __func_1(func, member) __func_22(func, __VA_ARGS__)
 // 传入一个函数func和一个list，把func用在list的每个元素上
-#define FOR_EACH(func, ...) EXPAND(MACRO_CAT(__func_, COUNT(__VA_ARGS__))(func, __VA_ARGS__))
+#define FOR_EACH(func, ...) MACRO_CAT(__func_, COUNT(__VA_ARGS__))(func, __VA_ARGS__)
 
 //在一个对象内部生成 unmarshal 函数.
 //尽力解析每个field,但不保证全部正确,未被正确解析的field保持原有值不变. 所有field 均被正确解析时返回true

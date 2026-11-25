@@ -73,6 +73,36 @@ message IOdata {
   double io_data = 2;
 }
 
+// MatrixVariable
+message MatrixVariable {
+  string matrixvar_name = 1;
+  repeated double data = 2;
+}
+
+// 干涉区
+message InfRng {
+  // 基础和控制属性
+  string  infrng_name = 1;
+  string  infrng_action = 2;            // stop/ pause
+  int32   infrng_isenable = 3;          // 0 / 1
+  int32   infrng_priority = 4;
+  string  infrng_zonetype = 5;          // interfere / safety
+  string  infrng_diname = 6;
+  string  infrng_doname = 7;
+
+  // 几何属性
+  string infrng_shape = 8;              // box / sphere / cylinder
+  repeated double infrng_center = 9;    // {x,y,z}，单位m
+  repeated double infrng_size = 10;     // box:{l,w,h} sphere:{r} cylinder:{r,h}
+  repeated double infrng_euler = 11;    // {rx,ry,rz},单位 rad
+  double infrng_margin = 12;            // 单位m
+  bool infrng_is_twopoint = 13;
+
+  // 仅 is_twopoint=true 时有值，否则为空数组
+  repeated double infrng_point1 = 14;   // {x,y,z}
+  repeated double infrng_point2 = 15;   // {x,y,z}
+}
+
 // 机器人模型信息
 message Model {
 	string model_name = 1;            // 模型名称
@@ -86,6 +116,9 @@ message Model {
 	bool is_collision_detection = 9;  // 是否开启碰撞检测
   int32 take_photo = 10;            // 启动相机拍照
   repeated IOdata io = 11;          // IO
+  repeated MatrixVariable matrix_variables = 12;  // 系统默认的变量集
+  repeated double drag_in_cst_coef = 13;          // 电流环拖动的系数
+  repeated InfRng inf_rngs = 14;                  // 安全区配置
 }
 
 // 子系统
@@ -98,8 +131,8 @@ message Subsystem {
 
 // 接口
 message Interface {
- string interface_name = 1; 
-  int32 id = 2;    //节点
+  string interface_name = 1;
+  int32 id = 2;       //节点
   int32 state = 3;    //状态
 }
 

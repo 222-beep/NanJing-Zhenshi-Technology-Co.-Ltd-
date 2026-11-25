@@ -285,7 +285,7 @@ nrt.slaveIsError(idx);    // bool   是否存在错误
 
 ### 子系统的 data 字段解析
 
-`data` 字段存储的是原始二进制数据（bytes），库不预设数据结构。用户根据协议自定义 POD 结构体，用 `memcpy` 解析。
+`data` 字段存储的是原始二进制数据（bytes）。通用协议可由用户自定义 POD 结构体，用 `memcpy` 或快照的 `parseSubsystemData<T>()` 解析；对于 `EthercatReadPDO` 子系统，SDK 已内置协议结构和读取函数，见下文。
 
 ```cpp
 // 1. 定义协议结构体（1字节对齐）
@@ -300,20 +300,55 @@ struct MyStruct {
 // 2. 方式一：快照上解析
 auto nrt = SystemStateReader::snapshotNrt();
 if (nrt.valid() && nrt.subsystemDataSize(0) >= sizeof(MyStruct)) {
-    MyStruct obj;
-    std::memcpy(&obj, nrt.subsystemRawData(0).data(), sizeof(MyStruct));
+    MyStruct obj = nrt.parseSubsystemData<MyStruct>(0);
     // 使用 obj.field_a ...
 }
 
 // 3. 方式二：自由函数 + 快照
 if (getSubsystemDataSize(0) >= sizeof(MyStruct)) {
     auto nrt_snap = SystemStateReader::snapshotNrt();
-    MyStruct obj;
-    std::memcpy(&obj, nrt_snap.subsystemRawData(0).data(), sizeof(MyStruct));
+    MyStruct obj = nrt_snap.parseSubsystemData<MyStruct>(0);
 }
 ```
 
-> 参考 `topic_sub_direct.cpp` / `topic_sub_snapshot.cpp` 中的 `TwoFingerGripperStatus` 示例。
+### EthercatReadPDO 子系统（NRT）
+
+包含 `ethercat_read_pdo.hpp` 后，可直接读取控制器通过 Protobuf 子系统 `data` 字段上报的 PDO 值：
+
+```cpp
+#include "ethercat_read_pdo.hpp"
+
+start_subscriber("192.168.2.216");
+
+auto nrt = SystemStateReader::snapshotNrt();
+for (size_t i = 0; nrt.valid() && i < nrt.subsystemCount(); ++i) {
+    EthercatReadPDOData pdo;
+    if (!tryGetEthercatPDOData(i, pdo)) {
+        continue; // 该子系统不是当前版本的 EthercatReadPDO 报文
+    }
+
+    for (uint16_t k = 0; k < pdo.count; ++k) {
+        const auto& v = pdo.values[k];
+        std::cout << "slave=" << v.slave_id
+                  << " obj=0x" << std::hex << v.index << std::dec
+                  << ":" << static_cast<int>(v.sub_index)
+                  << " pdo=" << v.raw
+                  << " result=" << pdoResultName(v.result)
+                  << " reason=" << pdoReasonName(v.reason)
+                  << std::endl;
+    }
+}
+```
+
+| 函数 | 返回值 | 说明 |
+|------|--------|------|
+| `isValidEthercatPDOData(raw)` | `bool` | 校验原始 bytes 是否符合当前 EthercatReadPDO 协议 |
+| `tryGetEthercatPDOData(idx, out)` | `bool` | 尝试读取第 `idx` 个子系统的 PDO 数据；失败返回 `false` |
+| `getEthercatPDOData(idx)` | `EthercatReadPDOData` | 读取第 `idx` 个子系统的 PDO 数据；失败抛出 `std::runtime_error` |
+| `pdoResultName(result)` | `const char*` | `pending` / `success` / `failed` |
+| `pdoReasonName(reason)` | `const char*` | `none` / `read_error` / `unavailable` / `offline` / `snapshot_error` / `stopped` |
+
+`EthercatReadPDOData` 当前协议版本为 1，总长 592 字节，最多 24 个条目；每个条目包含 `raw`、`slave_id`、`index`、`sub_index`、`size`、`read_rc`、`last_success_age_ms`、`result`、`reason`。
 
 ---
 

@@ -5,48 +5,16 @@
 #include <mutex>
 #include <condition_variable>
 #include <string.h>
+#include "util.hpp"
 
 #ifndef __TASK_POOL__
 #define __TASK_POOL__
 
-class ThreadPool {
+class CPP_RPC_EXPORT ThreadPool {
 public:
-    ThreadPool(size_t num_threads)
-        : stop(false) {
-        for (size_t i = 0; i < num_threads; ++i) {
-            workers_.emplace_back([this] {
-                for (;;) {
-                    std::function<void()> task;
+    ThreadPool(size_t num_threads);
 
-                    {
-                        std::unique_lock<std::mutex> lock(queue_mutex_);
-                        condition_.wait(lock, [this] { return stop || !tasks_.empty(); });
-
-                        if (stop && tasks_.empty())
-                            return;
-
-                        task = std::move(tasks_.front());
-                        tasks_.pop();
-                    }
-
-                    // 执行任务
-                    task();
-                }
-            });
-        }
-    }
-
-    ~ThreadPool() {
-        {
-            std::unique_lock<std::mutex> lock(queue_mutex_);
-            stop = true;
-        }
-        condition_.notify_all();
-
-        for (std::thread& worker : workers_) {
-            worker.join();
-        }
-    }
+    ~ThreadPool() ;
 
     template <typename Func, typename... Args>
     void Enqueue(Func&& func, Args&&... args) {
