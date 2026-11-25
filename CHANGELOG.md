@@ -6,6 +6,13 @@
 
 ## 2026-11-25
 
+### 同步 Gitee 更新（指令手册&SDK）
+
+- cd3b091 完善电流环拖动指令
+- 6b698b2 统一指令手册.md格式
+
+## 2026-11-25
+
 ### Base_function_SDK_c++ 增加 PDO 读取、独立线程 Stop/Start 并对齐电流环拖动
 
 - 新增 `robot_state/include/ethercat_read_pdo.hpp`，内置已验证的 EthercatReadPDO 线协议结构、报文校验和 `tryGetEthercatPDOData` / `getEthercatPDOData` 读取函数，支持通过 NRT Protobuf 子系统 `data` 字段获取 PDO 值；`API.md` 补充对应用法
@@ -264,6 +271,7 @@
 - **初始化** 仓库，上传各 SDK 模块（DragInCST、ForcePositionHybridControl、IOModule、JogAnyJ、JogC、MoveAbsJ、MoveBlend、MoveS、MoveSeriesToppJ、SubLoop、SyncAsync、Topic 等）
 - **上传** `指令手册-合-v1.7.4.pdf`、`Web使用手册v1.7.2.pdf`
 - **创建** 3 个独立分支分别存放文档、SDK 和上位机例程
+
 
 
 

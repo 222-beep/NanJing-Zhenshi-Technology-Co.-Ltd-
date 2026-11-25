@@ -302,7 +302,7 @@ C++ 和 Python 均支持 `timing_callback(RpcTimingInfo)`，包含消息序号�
 - `{SetUsingSP --state=on}` 开启最优求解器，用于笛卡尔空间运动；纯关节运动不需要。SyncAsync 同时演示 SpeedL，因此也包含该指令。
 - MoveS 当前使用 `--robottarget_value` 内联轨迹点；MoveAbsJ 主示例通过 `Var` 定义关节目标变量。
 - 双臂指令以 `||` 分隔左右模型，例如 `{MoveAbsJ||MoveAbsJ}`。
-- DragInCST 正常退出顺序为 `{Stop --last_count=10}` → `{Sleep --count=100}` → `{SwitchToCSP}` → `{Recover}` → `{Start}`。
+- DragInCST 先发送 `{DeleteMotionRecord}` → `{SwitchToCST --all --max_torque=1000}`，再同步发送一次 `{DragInCST}` 并等待 Ctrl+C；收到 Ctrl+C 后按 `{Stop --last_count=10}` → `{Sleep --count=20}` → `{SwitchToCSP --all --max_torque=1000}` → `{Recover}` → `{Start --last_count=50}` 退出。
 - Stop 仅在部分示例中显式发送，例如线程中断、力控退出、拖拽退出、正弦轨迹交互和快速关节目标示例。异常退出时仍须独立确认机器人状态。
 - SubLoop 是交互式示例，初始化和首条 SubLoop 发送调用当前为注释状态；应先阅读专用说明。首条 SubLoop 指令使用异步发送，响应超时应覆盖其执行周期。
 

@@ -1,6 +1,7 @@
-import sys, os, time
+import time
+import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'common', 'rpc', 'python')))
-from rpc_client import RpcClient, send_rpcsy, send_rpc_async
+from rpc_client import RpcClient, send_rpcsy
 
 ROBOT_IP = "192.168.11.11"
 
@@ -15,28 +16,27 @@ init_cmds = [
     "{Start}"
 ]
 
-# 切换到 CST 拖拽模式（拖拽前单独同步下发一次）
+# 切换到 CST 拖拽模式（先清除运动记录，再设置全部轴及最大力矩）
 switch_cst_cmd = [
-    "{SwitchToCST}"
+    "{GetDefaultVfCf}", 
+    "{DeleteMotionRecord}",
+    "{SwitchToCST --all --max_torque=1000}"
 ]
 
 # DragInCST 拖拽命令
 dragincst_cmd = [
-    # "{DragInCST --cf_coef={ 力控系数，共 7 位 }
-    #              --vf_coef={ 速度反馈系数，共 7 位 }
-    #              --vel_limit={ 各方向速度限制，共 7 位，单位 m/s 或 rad/s }
-    #              --ping_pong_amp=（乒乓幅度）
-    #              --zero_check=（零漂检测阈值）}"
-    "{DragInCST --cf_coef={0,0,0,0,0,0,0} --vf_coef={0,0,0,0,0,0,0} --vel_limit={0.3,0.3,0.3,0.3,0.3,0.3,0.3} --ping_pong_amp=0 --zero_check=0.004}"
+    "{DragInCST --cbfSwitch={0} --cutoff_freq=20.0 --gravity_cof={1.0} --ping_pong=100 --ping_pong_amp=0.5 --vel_limit={0.1} --zero_check={0.0001}}"
 ]
 
 # 退出 CST 拖拽，恢复到 CSP 位置模式
+# 顺序：Stop 停止拖拽 → Sleep 等待停止生效 → SwitchToCSP 切回位置模式
+#       → Recover 同步模型与实际状态 → Start 恢复运动控制
 exit_cmds = [
     "{Stop --last_count=10}",
-    "{Sleep --count=100}",
-    "{SwitchToCSP}",
+    "{Sleep --count=20}",
+    "{SwitchToCSP --all --max_torque=1000}",
     "{Recover}",
-    "{Start}"
+    "{Start --last_count=50}"
 ]
 
 
@@ -60,20 +60,36 @@ def main():
     send_rpcsy(client, switch_cst_cmd, sleep_s=0.1)
 
     # ==================================================================
-    #  示例 2：通用异步 RPC（不等返回，通过回调处理结果）
-    #  for 循环持续发送 DragInCST 保持拖拽状态
+    #  示例 2：通用同步 RPC
+    #  DragInCST 只需同步发送一次，随后等待 Ctrl+C 退出拖拽
     # ==================================================================
-    #  send_rpc_async(client, dragincst_cmd, wait_s=间隔秒)
+    #  send_rpcsy(client, dragincst_cmd, sleep_s=间隔秒)
 
-    # 持续发送 10 组指令
-    for _ in range(10):
-        send_rpc_async(client, dragincst_cmd, wait_s=0)
-        time.sleep(0.2)
+    try:
+        # DragInCST 只需发送一次，控制器会持续保持拖拽状态
+        send_rpcsy(client, dragincst_cmd, sleep_s=0.1)
+        print("DragInCST started. Press Ctrl+C to exit.")
 
-    # ==================================================================
-    #  退出 CST 拖拽模式，恢复到 CSP 位置模式
-    # ==================================================================
-    send_rpcsy(client, exit_cmds, sleep_s=0.1)
+        # 保持程序运行；Ctrl+C 会抛出 KeyboardInterrupt 跳出循环
+        # 不要在循环里一直重复发 DragInCST
+        while True:
+            time.sleep(0.2)
+
+    except KeyboardInterrupt:
+        # Ctrl+C 触发 KeyboardInterrupt，结束等待并进入 finally 退出流程
+        print("\nCtrl+C detected. Exit drag...")
+
+    finally:
+        # finally 保证 Ctrl+C 或异常后都尝试退出拖拽，避免模式残留
+        # ==================================================================
+        #  Ctrl+C 后退出 CST 拖拽模式，恢复到 CSP 位置模式
+        # ==================================================================
+        try:
+            # 正常 Ctrl+C 或上面异常后，都尝试发送退出序列
+            send_rpcsy(client, exit_cmds, sleep_s=0.1)
+            print("Exit commands sent.")
+        except Exception as exc:
+            print(f"Failed to send exit commands: {exc}")
 
 
 # 程序入口
